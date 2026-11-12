@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Categorías | Administración{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">CATÁLOGO</span><h2>Categorías</h2><p>Organiza los rubros disponibles en el marketplace.</p></div><button class="btn btn-primary" id="newCategory"><i class="bi bi-plus-lg me-1"></i>Nueva categoría</button></div>
+<div class="panel-card">
+  <div class="table-responsive">
+    <table class="table align-middle datatable">
+      <thead><tr><th>Nombre</th><th>Slug</th><th>Descripción</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+      <tbody>
+      {% for c in categorias %}
+        <tr>
+          <td class="fw-semibold">{{ c.nombre }}</td><td><code>{{ c.slug }}</code></td><td>{{ c.descripcion or '—' }}</td>
+          <td><span class="badge {{ 'text-bg-success' if c.activo else 'text-bg-secondary' }}">{{ 'Activa' if c.activo else 'Inactiva' }}</span></td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary" data-edit-category data-id="{{ c.id }}" data-name="{{ c.nombre }}" data-description="{{ c.descripcion or '' }}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm {{ 'btn-outline-danger' if c.activo else 'btn-outline-success' }}" data-toggle-category data-id="{{ c.id }}" data-active="{{ 'true' if c.activo else 'false' }}">{{ 'Desactivar' if c.activo else 'Activar' }}</button>
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="text-center text-secondary py-4">Sin categorías.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function categoryDialog(initial = {}) {
+  const result = await Swal.fire({
+    title: initial.id ? 'Editar categoría' : 'Nueva categoría',
+    html: `<input id="catName" class="swal2-input" maxlength="100" placeholder="Nombre" value="${Swal.escapeHtml(initial.name || '')}">
+           <textarea id="catDesc" class="swal2-textarea" placeholder="Descripción">${Swal.escapeHtml(initial.description || '')}</textarea>`,
+    focusConfirm: false, showCancelButton: true, confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      const nombre = document.getElementById('catName').value.trim();
+      if (!nombre) { Swal.showValidationMessage('El nombre es obligatorio.'); return false; }
+      return {nombre, descripcion: document.getElementById('catDesc').value};
+    }
+  });
+  if (!result.isConfirmed) return;
+  const url = initial.id ? `/admin/categorias/${initial.id}` : '/admin/categorias';
+  const {response, data} = await apiFetch(url, {method: initial.id ? 'PUT' : 'POST', body: JSON.stringify(result.value)});
+  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo guardar.');
+  await showAlert('success', data.message); location.reload();
+}
+document.getElementById('newCategory').addEventListener('click', () => categoryDialog());
+document.querySelectorAll('[data-edit-category]').forEach(btn => btn.addEventListener('click', () => categoryDialog({
+  id: btn.dataset.id, name: btn.dataset.name, description: btn.dataset.description
+})));
+document.querySelectorAll('[data-toggle-category]').forEach(btn => btn.addEventListener('click', async () => {
+  const active = btn.dataset.active === 'true';
+  const confirm = await Swal.fire({title: active ? '¿Desactivar categoría?' : '¿Activar categoría?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'});
+  if (!confirm.isConfirmed) return;
+  const {response, data} = await apiFetch(`/admin/categorias/${btn.dataset.id}/estado`, {method: 'PATCH', body: JSON.stringify({activo: !active})});
+  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo actualizar.');
+  await showAlert('success', data.message); location.reload();
+}));
+</script>
+{% endblock %}

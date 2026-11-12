@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Panel administrativo{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div><span class="eyebrow">CENTRO DE CONTROL</span><h2 class="fw-bold mb-1">Panel administrativo</h2><p class="text-secondary mb-0">Resumen general de la operación del marketplace.</p></div>
+  <span class="badge rounded-pill text-bg-light border px-3 py-2"><i class="bi bi-shield-lock me-1"></i>Administrador</span>
+</div>
+<div class="row g-3">
+  {% for label,value,icon,color in [('Usuarios registrados',total_usuarios,'people','primary'),('Prestadores',total_prestadores,'person-workspace','success'),('Prestadores suspendidos',prestadores_suspendidos,'person-x','danger'),('Certificaciones pendientes',pendientes,'clipboard-check','warning'),('Certificaciones vencidas',vencidas,'calendar-x','danger'),('Categorías',total_categorias,'grid','info'),('Servicios',total_servicios,'tools','dark')] %}
+  <div class="col-sm-6 col-xl">
+    <div class="stat-card"><div class="d-flex justify-content-between"><span class="text-secondary small">{{ label }}</span><span class="stat-icon text-{{ color }}"><i class="bi bi-{{ icon }}"></i></span></div><div class="stat-value">{{ value }}</div><div class="small text-secondary">Total registrado</div></div>
+  </div>
+  {% endfor %}
+</div>
+<div class="row g-3 mt-2">
+  <div class="col-lg-8"><div class="panel-card h-100"><h5 class="fw-bold">Gestión del marketplace</h5><p class="text-secondary">Administra profesionales, revisa credenciales y mantén actualizado el catálogo.</p><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="{{ url_for('admin.prestadores') }}">Administrar prestadores</a><a class="btn btn-outline-primary" href="{{ url_for('certificaciones.index') }}">Revisar certificaciones</a><a class="btn btn-outline-secondary" href="{{ url_for('catalogo.categorias') }}">Gestionar catálogo</a><a class="btn btn-outline-secondary" href="{{ url_for('admin.auditoria') }}">Ver auditoría</a></div></div></div>
+  <div class="col-lg-4"><div class="panel-card h-100"><h6 class="fw-bold">Regla de habilitación</h6><div class="d-flex align-items-center gap-3 mt-3"><div class="quality-icon"><i class="bi bi-patch-check"></i></div><div><div class="fw-semibold">Certificación vigente</div><small class="text-secondary">Un prestador solo puede activarse si tiene al menos una certificación aprobada y vigente.</small></div></div></div></div>
+</div>
+{% endblock %}

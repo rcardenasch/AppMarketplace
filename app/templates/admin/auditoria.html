@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Auditoría | Administración{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">TRAZABILIDAD</span><h2>Auditoría</h2><p>Últimas 500 acciones administrativas y eventos de certificación.</p></div></div>
+<div class="panel-card">
+  <div class="table-responsive">
+    <table class="table align-middle datatable">
+      <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Detalles</th><th>IP</th></tr></thead>
+      <tbody>
+      {% for a in registros %}
+        <tr>
+          <td class="small">{{ a.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+          <td>{{ a.actor.nombre_completo if a.actor else 'Sistema' }}</td>
+          <td><span class="badge text-bg-light border">{{ a.accion }}</span></td>
+          <td>{{ a.entidad }}</td><td>{{ a.entidad_id or '—' }}</td>
+          <td><details><summary>Ver</summary><pre class="small audit-json">{{ a.detalles|tojson(indent=2) }}</pre></details></td>
+          <td class="small text-secondary">{{ a.ip or '—' }}</td>
+        </tr>
+      {% else %}<tr><td colspan="7" class="text-center text-secondary py-4">Aún no hay eventos de auditoría.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

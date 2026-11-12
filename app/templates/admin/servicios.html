@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Servicios | Administración{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">CATÁLOGO</span><h2>Servicios</h2><p>Define y administra los servicios que los clientes podrán solicitar.</p></div><button class="btn btn-primary" id="newService"><i class="bi bi-plus-lg me-1"></i>Nuevo servicio</button></div>
+<div class="panel-card">
+  <div class="table-responsive">
+    <table class="table align-middle datatable">
+      <thead><tr><th>Servicio</th><th>Categoría</th><th>Precio referencial</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+      <tbody>
+      {% for s in servicios %}
+        <tr>
+          <td><div class="fw-semibold">{{ s.nombre }}</div><small class="text-secondary">{{ s.descripcion or '' }}</small></td>
+          <td>{{ s.categoria.nombre }}</td>
+          <td>{{ 'S/ %.2f'|format(s.precio_referencial) if s.precio_referencial is not none else 'A cotizar' }}</td>
+          <td><span class="badge {{ 'text-bg-success' if s.activo else 'text-bg-secondary' }}">{{ 'Activo' if s.activo else 'Inactivo' }}</span></td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary" data-edit-service data-id="{{ s.id }}" data-name="{{ s.nombre }}" data-description="{{ s.descripcion or '' }}" data-category="{{ s.categoria_id }}" data-price="{{ s.precio_referencial or '' }}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm {{ 'btn-outline-danger' if s.activo else 'btn-outline-success' }}" data-toggle-service data-id="{{ s.id }}" data-active="{{ 'true' if s.activo else 'false' }}">{{ 'Desactivar' if s.activo else 'Activar' }}</button>
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="text-center text-secondary py-4">No hay servicios registrados.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const categoryOptions = {{ categorias|map(attribute='id')|list|tojson }};
+const categoryNames = {{ categorias|map(attribute='nombre')|list|tojson }};
+const categorySelect = {{ categorias|map(attribute='id')|list|tojson }};
+const categoryLabels = {{ categorias|map(attribute='nombre')|list|tojson }};
+function buildCategoryOptions(selected) {
+  return categorySelect.map((id, i) => `<option value="${id}" ${String(id) === String(selected) ? 'selected' : ''}>${Swal.escapeHtml(categoryLabels[i])}</option>`).join('');
+}
+async function serviceDialog(initial = {}) {
+  if (!categorySelect.length) return showAlert('warning', 'Primero registra una categoría activa.');
+  const result = await Swal.fire({
+    title: initial.id ? 'Editar servicio' : 'Nuevo servicio',
+    html: `<input id="srvName" class="swal2-input" maxlength="150" placeholder="Nombre" value="${Swal.escapeHtml(initial.name || '')}">
+      <select id="srvCategory" class="swal2-select">${buildCategoryOptions(initial.category)}</select>
+      <textarea id="srvDesc" class="swal2-textarea" placeholder="Descripción">${Swal.escapeHtml(initial.description || '')}</textarea>
+      <input id="srvPrice" type="number" min="0" step="0.01" class="swal2-input" placeholder="Precio referencial (opcional)" value="${Swal.escapeHtml(initial.price || '')}">`,
+    showCancelButton: true, focusConfirm: false, confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      const nombre = document.getElementById('srvName').value.trim();
+      if (!nombre) { Swal.showValidationMessage('El nombre es obligatorio.'); return false; }
+      return {
+        nombre,
+        categoria_id: document.getElementById('srvCategory').value,
+        descripcion: document.getElementById('srvDesc').value,
+        precio_referencial: document.getElementById('srvPrice').value
+      };
+    }
+  });
+  if (!result.isConfirmed) return;
+  const url = initial.id ? `/admin/servicios/${initial.id}` : '/admin/servicios';
+  const {response, data} = await apiFetch(url, {method: initial.id ? 'PUT' : 'POST', body: JSON.stringify(result.value)});
+  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo guardar.');
+  await showAlert('success', data.message); location.reload();
+}
+document.getElementById('newService').addEventListener('click', () => serviceDialog());
+document.querySelectorAll('[data-edit-service]').forEach(btn => btn.addEventListener('click', () => serviceDialog({
+  id: btn.dataset.id, name: btn.dataset.name, description: btn.dataset.description, category: btn.dataset.category, price: btn.dataset.price
+})));
+document.querySelectorAll('[data-toggle-service]').forEach(btn => btn.addEventListener('click', async () => {
+  const active = btn.dataset.active === 'true';
+  const confirm = await Swal.fire({title: active ? '¿Desactivar servicio?' : '¿Activar servicio?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'});
+  if (!confirm.isConfirmed) return;
+  const {response, data} = await apiFetch(`/admin/servicios/${btn.dataset.id}/estado`, {method: 'PATCH', body: JSON.stringify({activo: !active})});
+  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo actualizar.');
+  await showAlert('success', data.message); location.reload();
+}));
+</script>
+{% endblock %}

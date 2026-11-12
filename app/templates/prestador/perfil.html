@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil profesional{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><span class="eyebrow">MI CUENTA PROFESIONAL</span><h2>Mi perfil</h2><p>Completa tu información y presenta tus credenciales.</p></div>
+  <span class="badge status-{{ perfil.estado|lower }}">{{ perfil.estado }}</span>
+</div>
+<div class="row g-3">
+  <div class="col-xl-7">
+    <div class="panel-card">
+      <h5 class="fw-bold mb-3">Información profesional</h5>
+      <form id="perfilForm">
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label">Descripción profesional</label><textarea class="form-control" name="descripcion" rows="4">{{ perfil.descripcion }}</textarea></div>
+          <div class="col-md-4"><label class="form-label">Años de experiencia</label><input class="form-control" type="number" min="0" max="60" name="experiencia_anios" value="{{ perfil.experiencia_anios }}"></div>
+          <div class="col-md-4"><label class="form-label">Ciudad</label><input class="form-control" name="ciudad" value="{{ perfil.ciudad }}" required></div>
+          <div class="col-md-4"><label class="form-label">Distrito</label><input class="form-control" name="distrito" value="{{ perfil.distrito or '' }}"></div>
+          <div class="col-12">
+            <label class="form-label">Especialidades</label>
+            <div class="row g-2">
+              {% for c in categorias %}
+              <div class="col-md-6"><div class="form-check border rounded p-3 ps-5"><input class="form-check-input" type="checkbox" name="categoria_ids" value="{{ c.id }}" id="cat{{ c.id }}" {{ 'checked' if c in perfil.categorias else '' }}><label class="form-check-label" for="cat{{ c.id }}">{{ c.nombre }}</label></div></div>
+              {% else %}<p class="text-secondary small">Todavía no hay categorías activas.</p>{% endfor %}
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary mt-4">Guardar perfil</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="panel-card mb-3">
+      <div class="quality-icon mb-3"><i class="bi bi-patch-check"></i></div>
+      <h5 class="fw-bold">Estado de certificación</h5>
+      <p class="text-secondary small">Solo los prestadores con una certificación aprobada y vigente podrán estar activos en el marketplace.</p>
+      <span class="badge {{ 'text-bg-success' if perfil.certificado else 'text-bg-warning' }}">{{ 'Certificación vigente' if perfil.certificado else 'Pendiente de certificación vigente' }}</span>
+    </div>
+    <div class="panel-card">
+      <h5 class="fw-bold mb-3">Presentar o renovar certificación</h5>
+      <form id="certificacionForm" enctype="multipart/form-data">
+        <div class="mb-3"><label class="form-label">Tipo de documento</label><input class="form-control" name="tipo" maxlength="120" required placeholder="Ej. Certificado técnico"></div>
+        <div class="mb-3"><label class="form-label">Descripción</label><textarea class="form-control" name="descripcion" rows="2"></textarea></div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label">Fecha de emisión</label><input class="form-control" type="date" name="fecha_emision"></div>
+          <div class="col-6"><label class="form-label">Vencimiento</label><input class="form-control" type="date" name="fecha_vencimiento"></div>
+        </div>
+        <div class="mt-3"><label class="form-label">Documento (PDF/JPG/PNG, máx. 8 MB)</label><input class="form-control" type="file" name="documento" accept=".pdf,.jpg,.jpeg,.png" required></div>
+        <button class="btn btn-primary w-100 mt-3">Enviar para revisión</button>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="panel-card mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold mb-0">Mis certificaciones</h5><span class="text-secondary small">{{ certificaciones|length }} registro(s)</span></div>
+  <div class="table-responsive">
+    <table class="table align-middle datatable">
+      <thead><tr><th>Tipo</th><th>Emisión</th><th>Vencimiento</th><th>Estado</th><th>Documento</th><th>Observación</th></tr></thead>
+      <tbody>
+      {% for c in certificaciones %}
+        <tr>
+          <td>{{ c.tipo }}</td>
+          <td>{{ c.fecha_emision.strftime('%d/%m/%Y') if c.fecha_emision else '—' }}</td>
+          <td>{{ c.fecha_vencimiento.strftime('%d/%m/%Y') if c.fecha_vencimiento else 'Sin vencimiento' }}</td>
+          <td><span class="badge status-{{ c.estado|lower }}">{{ c.estado }}</span></td>
+          <td>{% if c.documento_path %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('prestadores.descargar_mi_documento', certificacion_id=c.id) }}"><i class="bi bi-download"></i> Descargar</a>{% else %}—{% endif %}</td>
+          <td class="small text-secondary">{{ c.observaciones_admin or '—' }}</td>
+        </tr>
+      {% else %}<tr><td colspan="6" class="text-center text-secondary py-4">Aún no has presentado documentos.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('perfilForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.currentTarget;
+  const payload = {
+    descripcion: f.descripcion.value,
+    experiencia_anios: f.experiencia_anios.value,
+    ciudad: f.ciudad.value,
+    distrito: f.distrito.value,
+    categoria_ids: [...f.querySelectorAll('[name="categoria_ids"]:checked')].map(x => Number(x.value))
+  };
+  const {response, data} = await apiFetch('{{ url_for("prestadores.actualizar_mi_perfil") }}', {
+    method: 'POST', body: JSON.stringify(payload)
+  });
+  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo actualizar.');
+  await showAlert('success', data.message);
+  location.reload();
+});
+
+document.getElementById('certificacionForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const {response, data} = await apiFetch('{{ url_for("prestadores.solicitar_certificacion") }}', {
+    method: 'POST', body: new FormData(form)
+  });
+  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo enviar el documento.');
+  await showAlert('success', data.message);
+  location.reload();
+});
+</script>
+{% endblock %}

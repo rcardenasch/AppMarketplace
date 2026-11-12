@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Certificaciones | Administración{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><span class="eyebrow">CONTROL DE CALIDAD</span><h2>Certificaciones</h2><p>Revisa documentos, evalúa solicitudes y controla vencimientos.</p></div>
+  <button class="btn btn-outline-primary" id="syncExpirations"><i class="bi bi-arrow-repeat me-1"></i>Sincronizar vencimientos</button>
+</div>
+<div class="panel-card mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-4"><label class="form-label">Estado</label><select class="form-select" name="estado"><option value="">Todos</option>{% for e in ['PENDIENTE','APROBADA','RECHAZADA','VENCIDA'] %}<option value="{{ e }}" {{ 'selected' if estado_filtro == e else '' }}>{{ e }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><button class="btn btn-primary">Filtrar</button> <a class="btn btn-outline-secondary" href="{{ url_for('certificaciones.index') }}">Limpiar</a></div>
+  </form>
+</div>
+<div class="panel-card">
+  <div class="table-responsive">
+    <table class="table align-middle datatable">
+      <thead><tr><th>Prestador</th><th>Documento</th><th>Vigencia</th><th>Estado</th><th>Observación</th><th class="text-end">Evaluación</th></tr></thead>
+      <tbody>
+      {% for c in certificaciones %}
+        <tr>
+          <td><div class="fw-semibold">{{ c.perfil.usuario.nombre_completo }}</div><small class="text-secondary">{{ c.perfil.usuario.email }}</small></td>
+          <td>{{ c.tipo }}<div class="small text-secondary">{{ c.descripcion or '' }}</div>{% if c.documento_path %}<a class="btn btn-sm btn-outline-primary mt-1" href="{{ url_for('certificaciones.documento', certificacion_id=c.id) }}"><i class="bi bi-file-earmark-arrow-down"></i> Ver archivo</a>{% else %}<span class="small text-danger">Sin archivo</span>{% endif %}</td>
+          <td><div>Emisión: {{ c.fecha_emision.strftime('%d/%m/%Y') if c.fecha_emision else '—' }}</div><div class="small text-secondary">Vence: {{ c.fecha_vencimiento.strftime('%d/%m/%Y') if c.fecha_vencimiento else 'Sin vencimiento' }}</div></td>
+          <td><span class="badge status-{{ c.estado|lower }}">{{ c.estado }}</span></td>
+          <td class="small text-secondary">{{ c.observaciones_admin or '—' }}</td>
+          <td class="text-end">
+            {% if c.estado == 'PENDIENTE' %}
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-success" data-evaluate data-id="{{ c.id }}" data-state="APROBADA"><i class="bi bi-check-lg"></i> Aprobar</button>
+              <button class="btn btn-outline-danger" data-evaluate data-id="{{ c.id }}" data-state="RECHAZADA"><i class="bi bi-x-lg"></i> Rechazar</button>
+            </div>
+            {% else %}<span class="small text-secondary">Evaluada</span>{% endif %}
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="6" class="text-center text-secondary py-4">No hay certificaciones registradas.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('[data-evaluate]').forEach(button => {
+  button.addEventListener('click', async () => {
+    const state = button.dataset.state;
+    const result = await Swal.fire({
+      title: state === 'APROBADA' ? '¿Aprobar certificación?' : '¿Rechazar certificación?',
+      input: 'textarea', inputLabel: 'Observaciones (opcional)',
+      showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'
+    });
+    if (!result.isConfirmed) return;
+    const {response, data} = await apiFetch(`/admin/certificaciones/${button.dataset.id}/evaluar`, {
+      method: 'POST', body: JSON.stringify({estado: state, observaciones: result.value || ''})
+    });
+    if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo evaluar.');
+    await showAlert('success', data.message);
+    location.reload();
+  });
+});
+document.getElementById('syncExpirations').addEventListener('click', async () => {
+  const {response, data} = await apiFetch('{{ url_for("certificaciones.sincronizar_vencimientos") }}', {method: 'POST'});
+  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo sincronizar.');
+  await showAlert('success', data.message);
+  location.reload();
+});
+</script>
+{% endblock %}

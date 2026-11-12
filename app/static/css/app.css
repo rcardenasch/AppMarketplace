@@ -1,0 +1,36 @@
+:root{--brand:#263f9d;--brand-2:#4666df;--ink:#18233b;--muted:#6d7890;--line:#e8ebf3;--surface:#fff;--canvas:#f5f7fc}
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.app-navbar{background:linear-gradient(110deg,#17265f,#3049a4);box-shadow:0 8px 28px #14245a24}
+.brand-light{font-weight:400;color:#cbd5ff;margin-left:2px}
+.navbar .nav-link{color:#dce4ff!important;font-size:.92rem}
+.navbar .nav-link:hover{color:#fff!important}
+.page-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.35rem}
+.page-heading h2{font-size:clamp(1.6rem,2.4vw,2.1rem);font-weight:750;letter-spacing:-.04em;margin:.15rem 0}
+.page-heading p{color:var(--muted);margin:0}
+.eyebrow{font-size:.68rem;letter-spacing:.13em;font-weight:800;color:#6376c5}
+.panel-card,.stat-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:1.25rem;box-shadow:0 8px 28px #23345e08}
+.stat-card{height:100%;padding:1.15rem}
+.stat-value{font-size:2rem;font-weight:800;letter-spacing:-.05em;margin:.35rem 0}
+.stat-icon{font-size:1.3rem}
+.quality-icon{width:52px;height:52px;border-radius:16px;background:#eef2ff;color:var(--brand-2);display:grid;place-items:center;font-size:1.45rem}
+.form-control,.form-select{border-color:#dce1ed;border-radius:10px;padding:.65rem .8rem}
+.form-control:focus,.form-select:focus{border-color:#8798ec;box-shadow:0 0 0 .2rem #4666df18}
+.btn{border-radius:10px;font-weight:600}
+.btn-primary{background:var(--brand-2);border-color:var(--brand-2)}
+.btn-primary:hover{background:var(--brand);border-color:var(--brand)}
+.table>:not(caption)>*>*{padding:.85rem .7rem;border-bottom-color:#edf0f6}
+.table thead th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#78839a;font-weight:800;white-space:nowrap}
+.badge{font-weight:650;letter-spacing:.01em}
+.status-activo,.status-aprobada{background:#e5f7ee;color:#13764a}
+.status-pendiente{background:#fff4d9;color:#916000}
+.status-suspendido,.status-rechazada{background:#ffe8e8;color:#ad3030}
+.status-vencida{background:#f0e9ff;color:#6840a4}
+.status-rechazado{background:#ffe8e8;color:#ad3030}
+.auth-page{min-height:100vh;display:grid;place-items:center;padding:2rem 1rem;background:radial-gradient(circle at 15% 15%,#e6ebff,transparent 35%),radial-gradient(circle at 85% 80%,#e7e9ff,transparent 35%),#f6f7fc}
+.auth-card{width:min(100%,440px);background:white;border:1px solid var(--line);border-radius:22px;padding:2rem;box-shadow:0 18px 60px #263c8f18}
+.auth-card-wide{width:min(100%,760px)}
+.auth-icon{width:62px;height:62px;margin:auto;border-radius:18px;background:#eef2ff;color:#3457d5;display:grid;place-items:center;font-size:1.8rem}
+.audit-json{white-space:pre-wrap;max-width:360px;max-height:180px;overflow:auto;background:#f6f7fb;padding:.65rem;border-radius:8px}
+.dataTables_wrapper .dt-search input,.dataTables_wrapper .dt-length select{border:1px solid #dce1ed;border-radius:8px;padding:.35rem .55rem}
+@media(max-width:575px){.page-heading{align-items:flex-start;flex-direction:column}.auth-card{padding:1.4rem}.panel-card{padding:1rem}}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de servicios{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">SERVICIOS LOCALES</span><h2>Encuentra profesionales</h2><p>Explora categorías y servicios disponibles en el marketplace.</p></div></div>
+<div class="row g-3">
+  {% for categoria in categorias %}
+  <div class="col-md-6 col-xl-4">
+    <div class="panel-card h-100">
+      <div class="quality-icon mb-3"><i class="bi bi-grid"></i></div>
+      <h5 class="fw-bold">{{ categoria.nombre }}</h5>
+      <p class="text-secondary small">{{ categoria.descripcion or 'Servicios de esta categoría.' }}</p>
+      <ul class="list-unstyled mb-0">
+        {% for servicio in servicios if servicio.categoria_id == categoria.id %}
+        <li class="d-flex justify-content-between border-top py-2"><span>{{ servicio.nombre }}</span><small class="text-secondary">{{ 'S/ %.2f'|format(servicio.precio_referencial) if servicio.precio_referencial is not none else 'A cotizar' }}</small></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% else %}<div class="col-12"><div class="panel-card text-center text-secondary">Todavía no hay categorías publicadas.</div></div>{% endfor %}
+</div>
+{% endblock %}
