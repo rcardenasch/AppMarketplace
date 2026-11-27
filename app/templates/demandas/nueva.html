@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}Solicitar servicio | Marketplace{% endblock %}
+{% block content %}
+<div class="container py-4 py-lg-5" style="max-width: 1000px">
+  <div class="mb-4">
+    <span class="text-primary fw-semibold small text-uppercase">Nueva solicitud</span>
+    <h2 class="fw-bold mb-1">¿Qué servicio necesitas?</h2>
+    <p class="text-secondary mb-0">Selecciona una categoría, el servicio específico y dónde lo necesitas.</p>
+  </div>
+
+  <div class="wizard-stepper mb-4" id="demanda-stepper">
+    {% for label in ['Servicio','Detalles','Ubicación','Confirmar'] %}
+      <div class="wizard-step {% if loop.first %}active{% endif %}" data-step="{{ loop.index }}">
+        <span class="wizard-step-number">{{ loop.index }}</span>
+        <span class="wizard-step-label">{{ label }}</span>
+      </div>
+      {% if not loop.last %}<div class="wizard-step-line"></div>{% endif %}
+    {% endfor %}
+  </div>
+
+  <form id="form-demanda" novalidate>
+    <input type="hidden" id="csrf-token-demanda" value="{{ csrf_token() }}">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-3 p-md-4 p-lg-5">
+        <!-- PASO 1: CATEGORÍAS EN TARJETAS. NO SE UTILIZA SELECT -->
+        <section class="wizard-panel active" data-panel="1">
+          <h4 class="fw-bold mb-1">1. Selecciona una categoría</h4>
+          <p class="text-secondary mb-4">Toca una tarjeta para elegir el tipo de trabajo.</p>
+          <div class="panel-card row g-3" id="wizardCategoryCards">
+            {% for categoria in categorias %}
+              <div class="col-12 col-sm-6 col-lg-4">
+                <input class="visually-hidden category-radio" type="radio"
+                       name="categoria_id" id="categoria-{{ categoria.id }}"
+                       value="{{ categoria.id }}" required>
+                <label class="choice-card category-card h-100" for="categoria-{{ categoria.id }}">
+                  <span class="quality-icon"><i class="{{ categoria.icono or 'bi bi-grid-fill' }}"></i>
+                  <span class="choice-check"><i class="bi bi-check-circle-fill"></i></span>
+                  <strong>{{ categoria.nombre }}</strong>
+                  <!-- <small class="text-secondary">{{ categoria.descripcion|default('Servicios disponibles en esta categoría.', true) }}</small> -->
+                </label>
+              </div>
+            {% else %}
+              <div class="col-12"><div class="alert alert-warning mb-0">No hay categorías activas disponibles.</div></div>
+            {% endfor %}
+          </div>
+          <div class="invalid-feedback d-block d-none mt-2" id="categoria-error">Selecciona una categoría para continuar.</div>
+          <div class="wizard-hint mt-4"><i class="bi bi-lightbulb me-2"></i>En el siguiente paso aparecerán únicamente los servicios de la categoría elegida.</div>
+        </section>
+
+        <!-- PASO 2: SERVICIOS FILTRADOS POR CATEGORÍA -->
+        <section class="wizard-panel" data-panel="2">
+          <div class="mb-3">
+            <span class="badge bg-primary-subtle text-primary mb-2" id="badge-categoria">Categoría seleccionada</span>
+            <h4 class="fw-bold mb-1">2. Elige el servicio específico</h4>
+            <p class="text-secondary mb-0">Estas opciones corresponden a la categoría que seleccionaste.</p>
+          </div>
+          <div class="row g-3 mb-4" id="contenedor-servicios">
+            <div class="col-12"><div class="alert alert-light border">Primero selecciona una categoría.</div></div>
+          </div>
+          <div class="invalid-feedback d-block d-none mb-3" id="servicio-error">Selecciona un servicio para continuar.</div>
+          <hr class="my-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="titulo">Título de la solicitud <span class="text-danger">*</span></label>
+            <input class="form-control form-control-lg" id="titulo" name="titulo" minlength="5" maxlength="200" placeholder="Ej. Reparar una fuga de agua en la cocina" required>
+            <div class="invalid-feedback">Escribe un título de al menos 5 caracteres.</div>
+          </div>
+          <div>
+            <label class="form-label fw-semibold" for="descripcion">Describe el trabajo <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="descripcion" name="descripcion" rows="4" minlength="10" placeholder="Describe el problema, materiales, medidas, urgencia u otros detalles..." required></textarea>
+            <div class="d-flex justify-content-between form-text"><span>Incluye información útil para cotizar.</span><span id="descripcion-count">0 caracteres</span></div>
+            <div class="invalid-feedback">Describe el trabajo con al menos 10 caracteres.</div>
+          </div>
+        </section>
+
+        <!-- PASO 3: UBICACIÓN -->
+        <section class="wizard-panel" data-panel="3">
+          <h4 class="fw-bold mb-1">3. ¿Dónde necesitas el servicio?</h4>
+          <p class="text-secondary mb-4">La ubicación permite encontrar prestadores que atiendan tu zona.</p>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label" for="ciudad">Ciudad *</label><input class="form-control" id="ciudad" value="Ayacucho" required></div>
+            <div class="col-md-6"><label class="form-label" for="distrito">Distrito *</label><input class="form-control" id="distrito" required placeholder="Ej. Ayacucho"></div>
+            <div class="col-md-6"><label class="form-label" for="direccion">Dirección</label><input class="form-control" id="direccion" placeholder="Jr., calle, avenida y número"></div>
+            <div class="col-md-6"><label class="form-label" for="referencia">Referencia</label><input class="form-control" id="referencia" placeholder="Frente al parque, cerca del mercado..."></div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4 mb-2">
+            <div><strong>Ubicación en el mapa</strong><div class="small text-secondary">Haz clic o arrastra el marcador.</div></div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btn-mi-ubicacion"><i class="bi bi-crosshair me-1"></i>Usar mi ubicación</button>
+          </div>
+          <div id="mapa-demanda-wizard" class="rounded-3 border"></div>
+          <div class="small text-secondary mt-2" id="estado-coordenadas">La ubicación exacta es opcional.</div>
+          <input type="hidden" id="latitud"><input type="hidden" id="longitud">
+        </section>
+
+        <!-- PASO 4: CONFIRMACIÓN -->
+        <section class="wizard-panel" data-panel="4">
+          <h4 class="fw-bold mb-1">4. Confirma tu solicitud</h4>
+          <p class="text-secondary mb-4">Revisa los datos antes de buscar prestadores.</p>
+          <div class="review-card">
+            <div class="review-row"><span>Categoría</span><strong id="resumen-categoria">—</strong></div>
+            <div class="review-row"><span>Servicio</span><strong id="resumen-servicio">—</strong></div>
+            <div class="review-row"><span>Título</span><strong id="resumen-titulo">—</strong></div>
+            <div class="review-row align-items-start"><span>Descripción</span><strong id="resumen-descripcion">—</strong></div>
+            <div class="review-row"><span>Ciudad / distrito</span><strong id="resumen-zona">—</strong></div>
+            <div class="review-row"><span>Dirección</span><strong id="resumen-direccion">No indicada</strong></div>
+            <div class="review-row"><span>Coordenadas</span><strong id="resumen-geo">Sin punto exacto</strong></div>
+          </div>
+          <div class="alert alert-info border-0 mt-4 mb-0"><i class="bi bi-stars me-2"></i>Buscaremos prestadores compatibles según el sistema de matching.</div>
+        </section>
+      </div>
+      <div class="card-footer bg-white p-3 d-flex justify-content-between align-items-center">
+        <button type="button" class="btn btn-light border px-4" id="btn-anterior" disabled>Anterior</button>
+        <div class="d-flex align-items-center gap-3">
+          <small class="text-secondary" id="paso-texto">Paso 1 de 4</small>
+          <button type="button" class="btn btn-primary px-4" id="btn-siguiente">Continuar <i class="bi bi-arrow-right ms-1"></i></button>
+          <button type="submit" class="btn btn-success px-4 d-none" id="btn-confirmar"><i class="bi bi-search me-1"></i>Confirmar y buscar</button>
+        </div>
+      </div>
+    </div>
+  </form>
+  <div id="demanda-feedback" class="mt-3" aria-live="polite"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* Datos preparados por Flask y serializados de forma segura como JSON. */
+const SERVICIOS_POR_CATEGORIA = {
+{% for categoria in categorias %}
+  {{ categoria.id | tojson }}: [
+  {% for servicio in categoria.servicios if servicio.activo %}
+    {
+      id: {{ servicio.id | tojson }},
+      nombre: {{ servicio.nombre | tojson }},
+      descripcion: {{ (servicio.descripcion or '') | tojson }}
+    }{% if not loop.last %},{% endif %}
+  {% endfor %}
+  ]{% if not loop.last %},{% endif %}
+{% endfor %}
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const $ = id => document.getElementById(id);
+  const form = $('form-demanda');
+  const panels = [...document.querySelectorAll('.wizard-panel')];
+  const steps = [...document.querySelectorAll('.wizard-step')];
+  const btnPrev = $('btn-anterior'), btnNext = $('btn-siguiente'), btnSubmit = $('btn-confirmar');
+  const serviceContainer = $('contenedor-servicios');
+  let currentStep = 1, map = null, marker = null;
+
+  const selectedCategory = () => document.querySelector('input[name="categoria_id"]:checked');
+  const selectedService = () => document.querySelector('input[name="servicio_id"]:checked');
+  const val = id => ($(id)?.value || '').trim();
+
+  function renderServices(categoryRadio) {
+    const categoryId = String(categoryRadio.value);
+    const categoryName = categoryRadio.closest('.col-12, .col-sm-6, .col-lg-4')?.querySelector('strong')?.textContent.trim()
+      || categoryRadio.labels?.[0]?.querySelector('strong')?.textContent.trim()
+      || categoryRadio.dataset.nombre || 'Categoría seleccionada';
+    $('badge-categoria').textContent = categoryName;
+    $('categoria-error').classList.add('d-none');
+    $('servicio-error').classList.add('d-none');
+
+    const services = SERVICIOS_POR_CATEGORIA[categoryId] || [];
+    serviceContainer.replaceChildren();
+
+    if (!services.length) {
+      const col = document.createElement('div'); col.className = 'col-12';
+      const alert = document.createElement('div'); alert.className = 'alert alert-info mb-0';
+      alert.textContent = 'Esta categoría todavía no tiene servicios específicos registrados. Puedes describir lo que necesitas en los campos siguientes.';
+      col.appendChild(alert); serviceContainer.appendChild(col);
+      return;
+    }
+
+    services.forEach(service => {
+      const col = document.createElement('div'); col.className = 'col-12 col-md-6';
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = 'servicio_id'; input.value = service.id;
+      input.id = `servicio-${service.id}`; input.className = 'visually-hidden service-radio'; input.required = true;
+      const label = document.createElement('label'); label.className = 'choice-card service-card h-100'; label.htmlFor = input.id;
+      const top = document.createElement('span'); top.className = 'd-flex align-items-center justify-content-between mb-2';
+      const icon = document.createElement('i'); icon.className = 'bi bi-tools fs-4 text-primary';
+      const check = document.createElement('i'); check.className = 'bi bi-check-circle-fill choice-check';
+      top.append(icon, check);
+      const title = document.createElement('strong'); title.textContent = service.nombre;
+      label.append(top, title);
+      if (service.descripcion) { const desc = document.createElement('small'); desc.className = 'text-secondary mt-1'; desc.textContent = service.descripcion; label.append(desc); }
+      col.append(input, label); serviceContainer.appendChild(col);
+    });
+  }
+
+  document.querySelectorAll('input[name="categoria_id"]').forEach(radio => {
+    radio.addEventListener('change', () => renderServices(radio));
+  });
+
+  function validCurrentStep() {
+    if (currentStep === 1) {
+      const chosen = selectedCategory();
+      $('categoria-error').classList.toggle('d-none', !!chosen);
+      return !!chosen;
+    }
+    if (currentStep === 2) {
+      let valid = true;
+      const serviceRadios = serviceContainer.querySelectorAll('input[name="servicio_id"]');
+      if (serviceRadios.length) {
+        const chosen = selectedService();
+        $('servicio-error').classList.toggle('d-none', !!chosen);
+        valid = !!chosen;
+      }
+      [['titulo', 5], ['descripcion', 10]].forEach(([id, min]) => {
+        const el = $(id), ok = el.value.trim().length >= min;
+        el.classList.toggle('is-invalid', !ok); if (!ok) valid = false;
+      });
+      if (!valid) {
+        const first = !selectedService() && serviceRadios.length ? serviceRadios[0] : $('titulo').value.trim().length < 5 ? $('titulo') : $('descripcion');
+        first.focus?.();
+      }
+      return valid;
+    }
+    if (currentStep === 3) {
+      let valid = true;
+      ['ciudad','distrito'].forEach(id => {
+        const el = $(id), ok = el.value.trim().length >= 2;
+        el.classList.toggle('is-invalid', !ok); if (!ok) valid = false;
+      });
+      return valid;
+    }
+    return true;
+  }
+
+  function updateReview() {
+    const category = selectedCategory();
+    const service = selectedService();
+    $('resumen-categoria').textContent = category?.labels?.[0]?.querySelector('strong')?.textContent.trim() || '—';
+    $('resumen-servicio').textContent = service?.labels?.[0]?.querySelector('strong')?.textContent.trim() || 'No especificado';
+    $('resumen-titulo').textContent = val('titulo') || '—';
+    $('resumen-descripcion').textContent = val('descripcion') || '—';
+    $('resumen-zona').textContent = `${val('ciudad')} / ${val('distrito')}`;
+    $('resumen-direccion').textContent = [val('direccion'), val('referencia')].filter(Boolean).join(' · ') || 'No indicada';
+    $('resumen-geo').textContent = val('latitud') && val('longitud') ? `${val('latitud')}, ${val('longitud')}` : 'Sin punto exacto';
+  }
+
+  function showStep(n) {
+    currentStep = n;
+    panels.forEach(p => p.classList.toggle('active', Number(p.dataset.panel) === n));
+    steps.forEach(s => {
+      const index = Number(s.dataset.step);
+      s.classList.toggle('active', index === n);
+      s.classList.toggle('done', index < n);
+      s.querySelector('.wizard-step-number').innerHTML = index < n ? '<i class="bi bi-check-lg"></i>' : index;
+    });
+    btnPrev.disabled = n === 1;
+    btnNext.classList.toggle('d-none', n === 4);
+    btnSubmit.classList.toggle('d-none', n !== 4);
+    $('paso-texto').textContent = `Paso ${n} de 4`;
+    if (n === 3 && map) setTimeout(() => map.invalidateSize(), 120);
+    if (n === 4) updateReview();
+  }
+
+  btnNext.addEventListener('click', () => { if (validCurrentStep()) showStep(Math.min(4, currentStep + 1)); });
+  btnPrev.addEventListener('click', () => showStep(Math.max(1, currentStep - 1)));
+  $('descripcion').addEventListener('input', e => $('descripcion-count').textContent = `${e.target.value.length} caracteres`);
+
+  function setPoint(point) {
+    $('latitud').value = Number(point.lat).toFixed(7);
+    $('longitud').value = Number(point.lng).toFixed(7);
+    if (!marker) { marker = L.marker(point, {draggable:true}).addTo(map); marker.on('dragend', () => setPoint(marker.getLatLng())); }
+    else marker.setLatLng(point);
+    $('estado-coordenadas').textContent = 'Punto seleccionado. Puedes arrastrar el marcador para ajustarlo.';
+  }
+
+  if (window.L && $('mapa-demanda-wizard')) {
+    map = L.map('mapa-demanda-wizard').setView([-13.1631, -74.2236], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; OpenStreetMap'}).addTo(map);
+    map.on('click', e => setPoint(e.latlng));
+  }
+
+  $('btn-mi-ubicacion').addEventListener('click', () => {
+    if (!navigator.geolocation || !map) return;
+    const button = $('btn-mi-ubicacion'); button.disabled = true;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const point = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+      setPoint(point); map.setView(point, 16); button.disabled = false;
+    }, () => { button.disabled = false; alert('No se pudo obtener la ubicación. Marca el punto manualmente en el mapa.'); },
+    {enableHighAccuracy:true, timeout:10000});
+  });
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (currentStep !== 4) return;
+    const category = selectedCategory();
+    if (!category) { showStep(1); return; }
+    const servicesExist = serviceContainer.querySelectorAll('input[name="servicio_id"]').length > 0;
+    if (servicesExist && !selectedService()) { showStep(2); return; }
+
+    const payload = {
+      categoria_id: Number(category.value),
+      servicio_id: selectedService() ? Number(selectedService().value) : null,
+      titulo: val('titulo'), descripcion: val('descripcion'),
+      ciudad: val('ciudad'), distrito: val('distrito'),
+      direccion: val('direccion') || null, referencia: val('referencia') || null,
+      latitud: val('latitud') ? Number(val('latitud')) : null,
+      longitud: val('longitud') ? Number(val('longitud')) : null
+    };
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Publicando...';
+    try {
+      const response = await fetch('{{ url_for("demandas.crear_demanda_api") }}', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','Accept':'application/json',
+          'X-CSRFToken':$('csrf-token-demanda').value,'X-Requested-With':'XMLHttpRequest'},
+        body:JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'No se pudo registrar la solicitud.');
+      const data = result.data || {};
+      alert(`¡Solicitud publicada! Se encontraron ${data.total_prestadores ?? 0} prestadores compatibles.`);
+      window.location.assign(data.resultado_url || `/demandas/${data.demanda_id}/matches`);
+    } catch (error) {
+      $('demanda-feedback').innerHTML = `<div class="alert alert-danger">${String(error.message || 'Error al publicar la solicitud.').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</div>`;
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = '<i class="bi bi-search me-1"></i>Confirmar y buscar';
+    }
+  });
+});
+</script>
+<style>
+.wizard-stepper{display:flex;align-items:center;gap:8px}.wizard-step{display:flex;align-items:center;gap:8px;color:#8993a3;white-space:nowrap}.wizard-step-number{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#eef1f5;font-weight:700}.wizard-step.active,.wizard-step.done{color:#0d6efd;font-weight:600}.wizard-step.active .wizard-step-number{background:#0d6efd;color:#fff}.wizard-step.done .wizard-step-number{background:#e8f1ff;color:#0d6efd}.wizard-step-line{height:2px;background:#e9edf2;flex:1;min-width:10px}.wizard-panel{display:none;min-height:300px}.wizard-panel.active{display:block;animation:fadeIn .2s ease}@keyframes fadeIn{from{opacity:.4;transform:translateY(5px)}to{opacity:1;transform:none}}.choice-card{position:relative;display:flex;flex-direction:column;gap:8px;border:1.5px solid #e3e8ef;border-radius:14px;padding:18px;cursor:pointer;transition:.18s;background:#fff;min-height:145px}.choice-card:hover{border-color:#86b7fe;box-shadow:0 4px 16px #0d6efd12}.category-radio:checked+.choice-card,.service-radio:checked+.choice-card{border-color:#0d6efd;background:#f4f8ff;box-shadow:0 0 0 2px #0d6efd18}.choice-icon{font-size:1.6rem;color:#0d6efd}.choice-check{position:absolute;right:16px;top:16px;color:#0d6efd;opacity:0}.category-radio:checked+.choice-card .choice-check,.service-radio:checked+.choice-card .choice-check{opacity:1}.wizard-hint{background:#f4f7fb;border-radius:10px;padding:14px;color:#526174;font-size:.9rem}#mapa-demanda-wizard{height:320px;z-index:1}.review-card{border:1px solid #e9edf2;border-radius:12px;padding:8px 18px}.review-row{display:flex;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid #edf0f3}.review-row:last-child{border:0}.review-row>span{color:#697586;flex:0 0 30%}.review-row>strong{font-weight:600;overflow-wrap:anywhere;white-space:pre-wrap}@media(max-width:576px){.wizard-step{flex-direction:column;gap:3px;font-size:.72rem;flex:1}.wizard-step-number{width:30px;height:30px}.wizard-step-line{margin-top:-18px}.review-row{display:block}.review-row>span{display:block;margin-bottom:4px}}
+</style>
+{% endblock %}

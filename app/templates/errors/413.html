@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Archivo demasiado grande{% endblock %}
+{% block content %}
+<div class="text-center py-5"><i class="bi bi-file-earmark-x display-3 text-warning"></i><h2 class="mt-3">Archivo demasiado grande</h2><p class="text-secondary">{{ message }}</p><a class="btn btn-primary" href="{{ url_for('index') }}">Volver</a></div>
+{% endblock %}

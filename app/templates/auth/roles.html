@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Mis roles | Marketplace{% endblock %}
+{% block content %}
+<style>
+  .card-rol-activa {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+  }
+  .card-rol-activa:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important;
+  }
+</style>
+
+<div class="container py-4" style="max-width: 900px">
+  <div class="mb-4">
+    <h2 class="fw-bold mb-1">Mi cuenta y mis modos</h2>
+    <p class="text-secondary">Una sola cuenta puede contratar servicios y también ofrecerlos. Haz clic en un modo habilitado para entrar.</p>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <!-- TARJETA CLIENTE -->
+    <div class="col-md-6">
+      {% if current_user.has_role('CLIENTE') %}
+      <form method="post" action="{{ url_for('auth.cambiar_rol') }}" class="h-100">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="rol" value="CLIENTE">
+        <div class="card h-100 shadow-sm card-rol-activa {% if rol_activo == 'CLIENTE' %}border-primary border-2{% else %}border-0{% endif %}" 
+             onclick="this.closest('form').submit();">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-bag-check fs-3 text-primary"></i>
+                <h5 class="mb-0">Cliente</h5>
+              </div>
+              <i class="bi bi-arrow-right-circle text-primary fs-5"></i>
+            </div>
+            <p class="text-secondary small">Publica solicitudes, encuentra profesionales y contrata servicios.</p>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge text-bg-success">Habilitado</span>
+              {% if rol_activo == 'CLIENTE' %}
+                <span class="badge text-bg-primary">Modo actual</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+      {% else %}
+      <div class="card h-100 border-0 shadow-sm opacity-75">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-bag-check fs-3 text-secondary"></i>
+            <h5 class="mb-0">Cliente</h5>
+          </div>
+          <p class="text-secondary small">Publica solicitudes, encuentra profesionales y contrata servicios.</p>
+          <span class="badge text-bg-secondary">No habilitado</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- TARJETA PRESTADOR -->
+    <div class="col-md-6">
+      {% if current_user.has_role('PRESTADOR') %}
+      <form method="post" action="{{ url_for('auth.cambiar_rol') }}" class="h-100">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="rol" value="PRESTADOR">
+        <div class="card h-100 shadow-sm card-rol-activa {% if rol_activo == 'PRESTADOR' %}border-primary border-2{% else %}border-0{% endif %}" 
+             onclick="this.closest('form').submit();">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-tools fs-3 text-primary"></i>
+                <h5 class="mb-0">Prestador</h5>
+              </div>
+              <i class="bi bi-arrow-right-circle text-primary fs-5"></i>
+            </div>
+            <p class="text-secondary small">Completa tu perfil, registra tu ubicación y recibe oportunidades.</p>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge text-bg-success">Habilitado</span>
+              {% if rol_activo == 'PRESTADOR' %}
+                <span class="badge text-bg-primary">Modo actual</span>
+              {% endif %}
+              {% if current_user.perfil_profesional %}
+                <span class="badge text-bg-warning">Perfil: {{ current_user.perfil_profesional.estado }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+      {% else %}
+      <div class="card h-100 border-0 shadow-sm opacity-75">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-tools fs-3 text-secondary"></i>
+            <h5 class="mb-0">Prestador</h5>
+          </div>
+          <p class="text-secondary small">Completa tu perfil, registra tu ubicación y recibe oportunidades.</p>
+          <span class="badge text-bg-secondary">No habilitado</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not current_user.has_role('CLIENTE') or not current_user.has_role('PRESTADOR') or (current_user.has_role('PRESTADOR') and not current_user.perfil_profesional) %}
+  <div class="card border-0 shadow-sm"><div class="card-body p-4">
+    <h5 class="fw-bold">Habilitar otro modo</h5>
+    {% if not current_user.has_role('CLIENTE') %}
+    <form method="post" class="mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline-primary" name="rol" value="CLIENTE" type="submit"><i class="bi bi-bag-plus me-1"></i>Agregar modo cliente</button>
+    </form>
+    {% endif %}
+    {% if not current_user.has_role('PRESTADOR') or not current_user.perfil_profesional %}
+      <form method="post" class="border rounded p-3 mt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h6 class="fw-semibold">{% if current_user.has_role('PRESTADOR') %}Completar perfil de prestador{% else %}Activar modo prestador{% endif %}</h6>
+        <input type="hidden" name="rol" value="PRESTADOR">
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label">Descripción profesional</label><textarea class="form-control" name="descripcion" rows="3" required minlength="10" placeholder="Describe los servicios que realizas"></textarea></div>
+          <div class="col-md-4"><label class="form-label">Años de experiencia</label><input class="form-control" type="number" name="experiencia_anios" min="0" max="60" value="0"></div>
+          <div class="col-md-4"><label class="form-label">Ciudad</label><input class="form-control" name="ciudad" value="Ayacucho" required></div>
+          <div class="col-md-4"><label class="form-label">Distrito</label><input class="form-control" name="distrito"></div>
+          <div class="col-12"><label class="form-label">Especialidades</label><div class="row g-2">
+            {% for categoria in categorias %}
+            <div class="col-md-4 col-sm-6">
+              <label class="form-check">
+                <input class="form-check-input" type="checkbox" name="categoria_ids" value="{{ categoria.id }}" {% if loop.first %}required{% endif %}>
+                <span class="form-check-label">{{ categoria.nombre }}</span>
+              </label>
+            </div>
+            {% endfor %}
+          </div></div>
+        </div>
+        <button class="btn btn-primary mt-3" type="submit">Crear perfil de prestador</button>
+      </form>
+    {% endif %}
+  </div></div>
+  {% else %}
+  <div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>Tu cuenta ya tiene habilitados los modos Cliente y Prestador. Haz clic en cualquiera de las tarjetas superiores para cambiar de modo.</div>
+  {% endif %}
+</div>
+{% endblock %}

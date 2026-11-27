@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta | Marketplace{% endblock %}
+{% block main_class %}auth-page{% endblock %}
+{% block content %}
+<div class="auth-card auth-card-wide">
+  <h3 class="fw-bold mb-1">Crear cuenta</h3>
+  <p class="text-secondary mb-4">Únete al marketplace de servicios.</p>
+
+  <form method="post" id="registroForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Nombres</label>
+        <input class="form-control" name="nombres" required maxlength="100">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Apellidos</label>
+        <input class="form-control" name="apellidos" required maxlength="100">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Correo</label>
+        <input class="form-control" type="email" name="email" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Teléfono</label>
+        <input class="form-control" name="telefono" maxlength="20">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Tipo de cuenta</label>
+        <select class="form-select" name="rol" id="tipoCuenta">
+          <option value="CLIENTE">Cliente</option>
+          <option value="PRESTADOR">Prestador de servicios</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Contraseña (mínimo 10 caracteres)</label>
+        <input class="form-control" type="password" name="password" minlength="10" required autocomplete="new-password">
+      </div>
+      <div id="camposPrestador" class="row g-3 mt-1 d-none">
+        <div class="col-12">
+          <label class="form-label">Descripción profesional</label>
+          <textarea class="form-control" name="descripcion" id="descripcionPrestador" rows="2" minlength="10"></textarea>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Años de experiencia</label>
+          <input class="form-control" type="number" min="0" max="60" name="experiencia_anios" value="0">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Ciudad</label>
+          <input class="form-control" name="ciudad" value="Ayacucho">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Distrito</label>
+          <input class="form-control" name="distrito" value="Ayacucho">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Especialidades que ofreces</label>
+          <div class="row g-2">
+            {% for categoria in categorias %}
+            <div class="col-md-4 col-sm-6">
+              <label class="form-check">
+                <input class="form-check-input" type="checkbox" name="categoria_ids" value="{{ categoria.id }}">
+                <span class="form-check-label">{{ categoria.nombre }}</span>
+              </label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary w-100 mt-4">Crear cuenta</button>
+  </form>
+
+  <div class="text-center my-3 text-secondary small">O regístrate con</div>
+  <a id="googleRegistro" href="{{ url_for('auth.google_login', rol='CLIENTE') }}"
+     class="btn btn-outline-dark w-100">
+    <i class="bi bi-google me-2"></i>Continuar con Google
+  </a>
+
+  <p class="text-center small mt-3 mb-0">¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}">Inicia sesión</a></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const tipo = document.getElementById("tipoCuenta");
+  const campos = document.getElementById("camposPrestador");
+  const google = document.getElementById("googleRegistro");
+
+  function actualizar() {
+    const esPrestador = tipo.value === "PRESTADOR";
+    campos.classList.toggle("d-none", !esPrestador);
+    document.getElementById("descripcionPrestador").required = esPrestador;
+    google.href = "{{ url_for('auth.google_login') }}?rol=" + encodeURIComponent(tipo.value);
+  }
+
+  tipo.addEventListener("change", actualizar);
+  actualizar();
+})();
+</script>
+{% endblock %}

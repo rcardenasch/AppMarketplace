@@ -1,0 +1,300 @@
+:root{--brand:#263f9d;--brand-2:#4666df;--ink:#18233b;--muted:#6d7890;--line:#e8ebf3;--surface:#fff;--canvas:#f5f7fc}
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.app-navbar{background:linear-gradient(110deg,#17265f,#3049a4);box-shadow:0 8px 28px #14245a24}
+.brand-light{font-weight:400;color:#cbd5ff;margin-left:2px}
+.navbar .nav-link{color:#dce4ff!important;font-size:.92rem}
+.navbar .nav-link:hover{color:#fff!important}
+.page-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.35rem}
+.page-heading h2{font-size:clamp(1.6rem,2.4vw,2.1rem);font-weight:750;letter-spacing:-.04em;margin:.15rem 0}
+.page-heading p{color:var(--muted);margin:0}
+.eyebrow{font-size:.68rem;letter-spacing:.13em;font-weight:800;color:#6376c5}
+.panel-card,
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 1.25rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.panel-card:hover,
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card {
+  height: 100%;
+  padding: 1.15rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  margin: 0.35rem 0;
+}
+
+.stat-icon {
+  font-size: 1.3rem;
+}
+
+.card {
+  /* Suaviza el movimiento para que no sea brusco */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  /* Sube la tarjeta 5px hacia arriba */
+  transform: translateY(-5px);
+  /* Opcional: agrega sombra para dar sensación de elevación */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+
+/* =========================================
+   TARJETAS DE CATEGORÍAS (MARKETPLACE)
+   ========================================= */
+.category-card {
+  display: block;
+  background: var(--surface, #ffffff);
+  border: 1.5px solid var(--line, #e8ebf3);
+  border-radius: 18px;
+  padding: 1.5rem 1.35rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Efecto hover y estado activo idéntico a "Limpieza" en tu imagen */
+.category-card:hover,
+.category-card.active {
+  border-color: var(--brand, #263f9d);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(38, 63, 157, 0.08);
+}
+/* Caja cuadrada redondeada del icono */
+.category-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eff2fb; /* Tinte suave basado en #263f9d */
+  display: grid;
+  place-items: center;
+  font-size: 1.35rem;
+  margin-bottom: 1.15rem;
+  transition: transform 0.25s ease, background-color 0.25s ease;
+}
+
+.category-card:hover .category-icon {
+  transform: scale(1.06);
+  background: #e5eaf9;
+}
+
+/* Textos de la tarjeta */
+.category-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink, #18233b);
+  margin-bottom: 0.2rem;
+  letter-spacing: -0.01em;
+}
+
+.category-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted, #6d7890);
+  margin: 0;
+}
+
+/* Paleta de colores para cada icono (igual que en la referencia) */
+.icon-amber  { color: #f59e0b; } /* Electricidad */
+.icon-blue   { color: #2563eb; } /* Gasfitería */
+.icon-teal   { color: #10b981; } /* Limpieza */
+.icon-brown  { color: #a16207; } /* Carpintería */
+.icon-purple { color: #7c3aed; } /* Pintura */
+.icon-green  { color: #16a34a; } /* Jardinería */
+.icon-indigo { color: #4338ca; } /* Tecnología */
+.icon-orange { color: #ea580c; } /* Construcción */
+
+.quality-icon{width:52px;height:52px;border-radius:16px;background:#eef2ff;color:var(--brand-2);display:grid;place-items:center;font-size:1.45rem}
+.form-control,.form-select{border-color:#dce1ed;border-radius:10px;padding:.65rem .8rem}
+.form-control:focus,.form-select:focus{border-color:#8798ec;box-shadow:0 0 0 .2rem #4666df18}
+.btn{border-radius:10px;font-weight:600}
+.btn-primary{background:var(--brand-2);border-color:var(--brand-2)}
+.btn-primary:hover{background:var(--brand);border-color:var(--brand)}
+.table>:not(caption)>*>*{padding:.85rem .7rem;border-bottom-color:#edf0f6}
+.table thead th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#78839a;font-weight:800;white-space:nowrap}
+.badge{font-weight:650;letter-spacing:.01em}
+.status-activo,.status-aprobada{background:#e5f7ee;color:#13764a}
+.status-pendiente{background:#fff4d9;color:#916000}
+.status-suspendido,.status-rechazada{background:#ffe8e8;color:#ad3030}
+.status-vencida{background:#f0e9ff;color:#6840a4}
+.status-rechazado{background:#ffe8e8;color:#ad3030}
+.auth-page{min-height:100vh;display:grid;place-items:center;padding:2rem 1rem;background:radial-gradient(circle at 15% 15%,#e6ebff,transparent 35%),radial-gradient(circle at 85% 80%,#e7e9ff,transparent 35%),#f6f7fc}
+.auth-card{width:min(100%,440px);background:white;border:1px solid var(--line);border-radius:22px;padding:2rem;box-shadow:0 18px 60px #263c8f18}
+.auth-card-wide{width:min(100%,760px)}
+.auth-icon{width:62px;height:62px;margin:auto;border-radius:18px;background:#eef2ff;color:#3457d5;display:grid;place-items:center;font-size:1.8rem}
+.audit-json{white-space:pre-wrap;max-width:360px;max-height:180px;overflow:auto;background:#f6f7fb;padding:.65rem;border-radius:8px}
+/* =========================================
+   DATATABLES - ESTILO MARKETPLACE (#263f9d)
+   ========================================= */
+
+/* Barra superior (Buscador y selector de registros) */
+.dt-container .dt-layout-row:first-child,
+.dataTables_wrapper .dt-layout-row:first-child {
+  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+}
+
+.dt-container .dt-search label,
+.dt-container .dt-length label,
+.dataTables_wrapper .dt-search label,
+.dataTables_wrapper .dt-length label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Buscador */
+.dt-container .dt-search input,
+.dataTables_wrapper .dt-search input {
+  background-color: var(--surface);
+  border: 1px solid #dce1ed;
+  border-radius: 10px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  min-width: 240px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Selector "Mostrar registros" - Solución definitiva a la flecha */
+.dt-container .dt-length select,
+.dt-container .dt-length .form-select,
+.dataTables_wrapper .dt-length select {
+  background-color: var(--surface);
+  border: 1px solid #dce1ed;
+  border-radius: 10px;
+  padding: 0.45rem 2.4rem 0.45rem 0.85rem !important;
+  min-width: 78px !important;
+  width: auto !important;
+  font-size: 0.875rem;
+  color: var(--ink);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dt-container .dt-search input:focus,
+.dt-container .dt-length select:focus,
+.dt-container .dt-length .form-select:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(38, 63, 157, 0.14);
+}
+
+/* Encabezado de la tabla */
+table.dataTable thead th {
+  background-color: #f7f9fc;
+  border-bottom: 1px solid var(--line) !important;
+  color: #3d465c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.85rem 0.75rem !important;
+}
+
+/* Celdas y filas */
+table.dataTable tbody td {
+  padding: 0.9rem 0.75rem !important;
+  border-bottom: 1px solid #edf0f6;
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+table.dataTable tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+table.dataTable tbody tr:hover {
+  background-color: rgba(38, 63, 157, 0.035) !important;
+}
+
+table.dataTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Paginación e información inferior */
+.dt-container .dt-layout-row:last-child,
+.dataTables_wrapper .dt-layout-row:last-child {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.dt-container .dt-paging .dt-paging-button,
+.dt-container .pagination .page-link {
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  padding: 0.35rem 0.72rem !important;
+  margin: 0 2px;
+  font-weight: 600;
+  color: #3d465c !important;
+  transition: all 0.2s ease;
+}
+
+.dt-container .dt-paging .dt-paging-button:hover:not(.disabled):not(.current),
+.dt-container .pagination .page-item:not(.active):not(.disabled) .page-link:hover {
+  background: rgba(38, 63, 157, 0.08) !important;
+  color: var(--brand) !important;
+}
+
+.dt-container .dt-paging .dt-paging-button.current,
+.dt-container .pagination .page-item.active .page-link {
+  background: var(--brand) !important;
+  color: #ffffff !important;
+  border-color: var(--brand) !important;
+  box-shadow: 0 2px 6px rgba(38, 63, 157, 0.25);
+}
+
+.dt-container .dt-paging .dt-paging-button.disabled,
+.dt-container .pagination .page-item.disabled .page-link {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   RESPONSIVE MÓVIL
+   ========================================= */
+@media (max-width: 575px) {
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .auth-card {
+    padding: 1.4rem;
+  }
+
+  .panel-card {
+    padding: 1rem;
+  }
+
+  .dt-container .dt-search,
+  .dt-container .dt-search input {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .dt-container .dt-length {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+}

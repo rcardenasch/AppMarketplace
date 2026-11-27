@@ -1,0 +1,23 @@
+{
+  "name": "appmarketplace",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/rcardenasch/AppMarketplace#readme",
+  "bugs": {
+    "url": "https://github.com/rcardenasch/AppMarketplace/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rcardenasch/AppMarketplace.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

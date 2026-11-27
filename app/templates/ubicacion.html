@@ -1,0 +1,174 @@
+
+{% extends "base.html" %}
+
+{% block title %}Mi ubicación{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-header bg-white py-3">
+            <h4 class="mb-1">Mi ubicación de atención</h4>
+            <small class="text-muted">
+                Registra dónde trabajas y hasta dónde puedes desplazarte.
+            </small>
+        </div>
+
+        <div class="card-body">
+
+            <form method="POST">
+
+                <input type="hidden" name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                <div class="row g-3">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Departamento</label>
+                        <input class="form-control"
+                               name="departamento"
+                               value="{{ ubicacion.departamento if ubicacion else 'Ayacucho' }}"
+                               required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Provincia</label>
+                        <input class="form-control"
+                               name="provincia"
+                               value="{{ ubicacion.provincia if ubicacion else '' }}"
+                               required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Distrito</label>
+                        <input class="form-control"
+                               name="distrito"
+                               value="{{ ubicacion.distrito if ubicacion else '' }}"
+                               required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Dirección</label>
+                        <input class="form-control"
+                               name="direccion"
+                               value="{{ ubicacion.direccion if ubicacion else '' }}">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Referencia</label>
+                        <input class="form-control"
+                               name="referencia"
+                               value="{{ ubicacion.referencia if ubicacion else '' }}">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Latitud</label>
+                        <input class="form-control"
+                               id="latitud"
+                               name="latitud"
+                               value="{{ ubicacion.latitud if ubicacion else '' }}">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Longitud</label>
+                        <input class="form-control"
+                               id="longitud"
+                               name="longitud"
+                               value="{{ ubicacion.longitud if ubicacion else '' }}">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Radio de atención (km)</label>
+                        <input type="number"
+                               class="form-control"
+                               name="radio_atencion_km"
+                               min="1"
+                               max="500"
+                               step="0.5"
+                               value="{{ ubicacion.radio_atencion_km if ubicacion else 10 }}">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">
+                            Selecciona tu ubicación en el mapa
+                        </label>
+                        <div id="mapa" style="height: 400px;"></div>
+                    </div>
+
+                    <div class="col-12 text-end">
+                        <button class="btn btn-primary">
+                            Guardar ubicación
+                        </button>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const latInput = document.getElementById("latitud");
+    const lngInput = document.getElementById("longitud");
+
+    const latInicial = parseFloat(latInput.value) || -13.1631;
+    const lngInicial = parseFloat(lngInput.value) || -74.2236;
+
+    const mapa = L.map("mapa").setView(
+        [latInicial, lngInicial], 14
+    );
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            attribution: "&copy; OpenStreetMap"
+        }
+    ).addTo(mapa);
+
+    let marcador = L.marker(
+        [latInicial, lngInicial],
+        { draggable: true }
+    ).addTo(mapa);
+
+    function actualizar(lat, lng) {
+        latInput.value = lat.toFixed(7);
+        lngInput.value = lng.toFixed(7);
+    }
+
+    mapa.on("click", function (e) {
+        marcador.setLatLng(e.latlng);
+        actualizar(e.latlng.lat, e.latlng.lng);
+    });
+
+    marcador.on("dragend", function () {
+        const posicion = marcador.getLatLng();
+        actualizar(posicion.lat, posicion.lng);
+    });
+
+    [latInput, lngInput].forEach(input => {
+        input.addEventListener("change", function () {
+            const lat = parseFloat(latInput.value);
+            const lng = parseFloat(lngInput.value);
+
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                marcador.setLatLng([lat, lng]);
+                mapa.setView([lat, lng], 15);
+            }
+        });
+    });
+
+});
+</script>
+
+{% endblock %}

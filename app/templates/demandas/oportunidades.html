@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Oportunidades | Marketplace{% endblock %}
+{% block content %}
+<div class="container py-4"><h2 class="fw-bold mb-1">Oportunidades para ti</h2><p class="text-secondary">Solicitudes compatibles con tus especialidades y zona de atención.</p>
+  {% if items %}<div class="row g-3">{% for item in items %}<div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="d-flex justify-content-between"><h5 class="fw-bold">{{ item.demanda.titulo }}</h5><span class="badge text-bg-primary">{{ '%.1f'|format(item.match.score * 100) }}%</span></div><p>{{ item.demanda.descripcion }}</p><div class="small text-secondary">{{ item.demanda.ciudad }}, {{ item.demanda.distrito }}</div>{% if item.match.distancia_km is not none %}<div class="small mt-2"><i class="bi bi-geo-alt"></i> A {{ item.match.distancia_km }} km de tu ubicación</div>{% endif %}<div class="small mt-2">Estado: {{ item.match.estado }}</div></div></div></div>{% endfor %}</div>
+  {% else %}<div class="alert alert-info">Todavía no tienes nuevas oportunidades compatibles. Verifica que tu perfil esté activo, certificado y que hayas registrado tus especialidades y ubicación.</div>{% endif %}
+</div>
+{% endblock %}

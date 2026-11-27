@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+{% block title %}Categorías | Administración{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <span class="eyebrow">CATÁLOGO</span>
+    <h2>Categorías</h2>
+    <p>Organiza los rubros disponibles en el marketplace.</p>
+  </div>
+  <button class="btn btn-primary" id="newCategory">
+    <i class="bi bi-plus-lg me-1"></i>Nueva categoría
+  </button>
+</div>
+
+<div class="row g-3" id="adminCatalogCards">
+  {% for c in categorias %}
+  <div class="col-md-3 col-sm-6">
+    <div class="category-card h-100 d-flex flex-column {{ 'is-inactive' if not c.activo }}">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div class="quality-icon">
+          <i class="{{ c.icono or 'bi bi-grid-fill' }}"></i>
+        </div>
+        <span class="badge {{ 'status-activo' if c.activo else 'bg-secondary-subtle text-secondary' }}">
+          {{ 'Activa' if c.activo else 'Inactiva' }}
+        </span>
+      </div>
+
+      <h3 class="category-title">{{ c.nombre }}</h3>
+      <code class="small text-muted mb-2">{{ c.slug }}</code>
+      <p class="category-subtitle flex-grow-1 mb-3">
+        {{ c.descripcion or 'Sin descripción' }}
+      </p>
+
+      <div class="d-flex justify-content-end gap-2 mt-auto pt-2 border-top border-light-subtle">
+        <button class="btn btn-sm btn-outline-warning px-2" 
+                data-edit-category 
+                data-id="{{ c.id }}" 
+                data-name="{{ c.nombre }}" 
+                data-icon="{{ c.icono or '' }}"
+                data-description="{{ c.descripcion or '' }}"
+                title="Editar">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm px-2 {{ 'btn-outline-danger' if c.activo else 'btn-outline-success' }}" 
+                data-toggle-category 
+                data-id="{{ c.id }}" 
+                data-active="{{ 'true' if c.activo else 'false' }}"
+                title="{{ 'Desactivar' if c.activo else 'Activar' }}">
+          <i class="bi {{ 'bi-eye-slash' if c.activo else 'bi-eye' }}"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="panel-card text-center text-secondary py-5">
+      No hay categorías registradas en el catálogo.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+
+<!-- MODAL REUTILIZABLE: NUEVA / EDITAR CATEGORÍA -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="categoryModalLabel">Nueva categoría</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form id="categoryForm" novalidate>
+        <div class="modal-body">
+          <input type="hidden" id="catId">
+
+          <!-- Nombre -->
+          <div class="mb-3">
+            <label for="catName" class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="catName" maxlength="100" placeholder="Ej. Gasfitería, Electricidad..." required>
+            <div class="invalid-feedback">El nombre de la categoría es obligatorio.</div>
+          </div>
+
+          <!-- Selector de Ícono con vista previa -->
+          <div class="mb-3">
+            <label for="catIcon" class="form-label fw-semibold">Ícono (Bootstrap Icons)</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light text-primary fs-5" id="iconPreview">
+                <i class="bi bi-grid"></i>
+              </span>
+              <input type="text" class="form-control" id="catIcon" maxlength="50" value="bi bi-grid" placeholder="bi bi-tools">
+            </div>
+            <!-- Sugerencias rápidas de íconos -->
+            <div class="d-flex flex-wrap gap-1 mt-2">
+                <!-- Tus íconos originales -->
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-tools" title="Herramientas"><i class="bi bi-tools"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-lightning-charge" title="Electricidad"><i class="bi bi-lightning-charge"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-droplet" title="Gasfitería"><i class="bi bi-droplet"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-house-gear" title="Hogar"><i class="bi bi-house-gear"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-laptop" title="Tecnología"><i class="bi bi-laptop"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-truck" title="Transporte"><i class="bi bi-truck"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-brush" title="Limpieza / Pintura"><i class="bi bi-brush"></i></button>
+
+                <!-- Hogar, Construcción y Mantenimiento -->
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-hammer" title="Carpintería / Albañilería"><i class="bi bi-hammer"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-key" title="Cerrajería"><i class="bi bi-key"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-tree" title="Jardinería"><i class="bi bi-tree"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-snow" title="Aire acondicionado / Refrigeración"><i class="bi bi-snow"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-shield-lock" title="Seguridad / Cámaras"><i class="bi bi-shield-lock"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-bricks" title="Construcción / Remodelación"><i class="bi bi-bricks"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-bug" title="Fumigación"><i class="bi bi-bug"></i></button>
+
+                <!-- Vehículos y Logística -->
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-car-front" title="Mecánica automotriz"><i class="bi bi-car-front"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-box-seam" title="Mudanzas / Encomiendas"><i class="bi bi-box-seam"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-bicycle" title="Delivery / Mensajería"><i class="bi bi-bicycle"></i></button>
+
+                <!-- Tecnología y Soporte -->
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-phone" title="Reparación de celulares"><i class="bi bi-phone"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-router" title="Redes / Internet"><i class="bi bi-router"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-printer" title="Impresoras / Oficina"><i class="bi bi-printer"></i></button>
+
+                <!-- Servicios Personales, Educación y Eventos -->
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-scissors" title="Belleza / Peluquería / Sastrería"><i class="bi bi-scissors"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-heart-pulse" title="Salud / Enfermería"><i class="bi bi-heart-pulse"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-mortarboard" title="Clases / Tutorías"><i class="bi bi-mortarboard"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-camera" title="Fotografía / Video"><i class="bi bi-camera"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-cake2" title="Catering / Repostería"><i class="bi bi-cake2"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-briefcase" title="Asesoría legal / Contable"><i class="bi bi-briefcase"></i></button>
+                <button type="button" class="btn btn-sm btn-light border icon-preset" data-icon="bi bi-piggy-bank" title="Mascotas / Veterinaria"><i class="bi bi-heart"></i></button>
+            </div>
+
+          </div>
+
+          <!-- Descripción -->
+          <div class="mb-3">
+            <label for="catDesc" class="form-label fw-semibold">Descripción</label>
+            <textarea class="form-control" id="catDesc" rows="3" maxlength="255" placeholder="Describe brevemente los servicios de este rubro..."></textarea>
+          </div>
+
+          <!-- Estado -->
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="catActive" checked>
+            <label class="form-check-label" for="catActive">Categoría activa en el marketplace</label>
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveCategory">
+            <i class="bi bi-check-lg me-1"></i>Guardar categoría
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const categoryModalEl = document.getElementById('categoryModal');
+    const categoryForm = document.getElementById('categoryForm');
+    const iconInput = document.getElementById('catIcon');
+    const iconPreview = document.getElementById('iconPreview');
+
+    function getModal() {
+        if (typeof bootstrap === 'undefined') {
+            console.error('Bootstrap JS no está cargado en base.html');
+            alert('Error: Bootstrap JS no está cargado en la plantilla base.');
+            return null;
+        }
+        return bootstrap.Modal.getOrCreateInstance(categoryModalEl);
+    }
+
+    function updateIconPreview(iconClass) {
+        const cleanClass = iconClass.trim() || 'bi bi-grid';
+        iconPreview.innerHTML = `<i class="${cleanClass}"></i>`;
+    }
+
+    iconInput.addEventListener('input', (e) => updateIconPreview(e.target.value));
+
+    document.querySelectorAll('.icon-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            iconInput.value = btn.dataset.icon;
+            updateIconPreview(btn.dataset.icon);
+        });
+    });
+
+    // Abrir modal en modo CREAR (ID corregido a 'newCategory')
+    document.getElementById('newCategory').addEventListener('click', () => {
+        categoryForm.reset();
+        categoryForm.classList.remove('was-validated');
+        document.getElementById('catId').value = '';
+        document.getElementById('categoryModalLabel').textContent = 'Nueva categoría';
+        document.getElementById('catIcon').value = 'bi bi-grid';
+        document.getElementById('catActive').checked = true;
+        updateIconPreview('bi bi-grid');
+        
+        const modal = getModal();
+        if (modal) modal.show();
+    });
+
+    // Abrir modal en modo EDITAR
+    document.querySelectorAll('[data-edit-category]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            categoryForm.reset();
+            categoryForm.classList.remove('was-validated');
+            document.getElementById('catId').value = btn.dataset.id;
+            document.getElementById('categoryModalLabel').textContent = 'Editar categoría';
+            document.getElementById('catName').value = btn.dataset.name;
+            document.getElementById('catIcon').value = btn.dataset.icon || 'bi bi-grid';
+            document.getElementById('catDesc').value = btn.dataset.description || '';
+            document.getElementById('catActive').checked = btn.dataset.active === 'true';
+            updateIconPreview(btn.dataset.icon || 'bi bi-grid');
+            
+            const modal = getModal();
+            if (modal) modal.show();
+        });
+    });
+
+    // Enviar formulario (POST para crear / PUT para editar)
+    categoryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!categoryForm.checkValidity()) {
+            categoryForm.classList.add('was-validated');
+            return;
+        }
+
+        const id = document.getElementById('catId').value;
+        const payload = {
+            nombre: document.getElementById('catName').value.trim(),
+            icono: document.getElementById('catIcon').value.trim(),
+            descripcion: document.getElementById('catDesc').value.trim(),
+            activo: document.getElementById('catActive').checked
+        };
+
+        const url = id ? `/admin/categorias/${id}` : '/admin/categorias';
+        const method = id ? 'PUT' : 'POST';
+
+        const { response, data } = await apiFetch(url, {
+            method,
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok || !data.ok) {
+            return showAlert('error', data.message || 'No se pudo guardar la categoría.');
+        }
+
+        const modal = getModal();
+        if (modal) modal.hide();
+        await showAlert('success', data.message);
+        location.reload();
+    });
+
+    // Activar / Desactivar rápido (Comillas invertidas agregadas)
+    document.querySelectorAll('[data-toggle-category]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const active = btn.dataset.active === 'true';
+            const confirm = await Swal.fire({
+                title: active ? '¿Desactivar categoría?' : '¿Activar categoría?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Confirmar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!confirm.isConfirmed) return;
+
+            const { response, data } = await apiFetch(`/admin/categorias/${btn.dataset.id}/estado`, {
+                method: 'PATCH',
+                body: JSON.stringify({ activo: !active })
+            });
+
+            if (!response.ok || !data.ok) {
+                return showAlert('error', data.message || 'No se pudo actualizar.');
+            }
+
+            await showAlert('success', data.message);
+            location.reload();
+        });
+    });
+});
+</script>
+
+<script>
+async function categoryDialog(initial = {}) {
+  const result = await Swal.fire({
+    title: initial.id ? 'Editar categoría' : 'Nueva categoría',
+    html: `
+      <input id="catName" class="swal2-input" maxlength="100" placeholder="Nombre de la categoría" value="${Swal.escapeHtml(initial.name || '')}">
+      <input id="catIcon" class="swal2-input" maxlength="50" placeholder="Clase de ícono (ej. bi bi-tools)" value="${Swal.escapeHtml(initial.icon || '')}">
+      <textarea id="catDesc" class="swal2-textarea" placeholder="Descripción">${Swal.escapeHtml(initial.description || '')}</textarea>
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Guardar',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      const nombre = document.getElementById('catName').value.trim();
+      if (!nombre) {
+        Swal.showValidationMessage('El nombre es obligatorio.');
+        return false;
+      }
+      return {
+        nombre,
+        icono: document.getElementById('catIcon').value.trim(),
+        descripcion: document.getElementById('catDesc').value.trim()
+      };
+    }
+  });
+
+  if (!result.isConfirmed) return;
+
+  const url = initial.id ? `/admin/categorias/${initial.id}` : '/admin/categorias';
+  const { response, data } = await apiFetch(url, {
+    method: initial.id ? 'PUT' : 'POST',
+    body: JSON.stringify(result.value)
+  });
+
+  if (!response.ok || !data.ok) {
+    return showAlert('error', data.message || 'No se pudo guardar.');
+  }
+  await showAlert('success', data.message);
+  location.reload();
+}
+
+document.getElementById('newCategory').addEventListener('click', () => categoryDialog());
+
+document.querySelectorAll('[data-edit-category]').forEach(btn => {
+  btn.addEventListener('click', () => categoryDialog({
+    id: btn.dataset.id,
+    name: btn.dataset.name,
+    icon: btn.dataset.icon,
+    description: btn.dataset.description
+  }));
+});
+
+document.querySelectorAll('[data-toggle-category]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const active = btn.dataset.active === 'true';
+    const confirm = await Swal.fire({
+      title: active ? '¿Desactivar categoría?' : '¿Activar categoría?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!confirm.isConfirmed) return;
+
+    const { response, data } = await apiFetch(`/admin/categorias/${btn.dataset.id}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ activo: !active })
+    });
+    if (!response.ok || !data.ok) {
+      return showAlert('error', data.message || 'No se pudo actualizar.');
+    }
+    await showAlert('success', data.message);
+    location.reload();
+  });
+});
+</script>
+{% endblock %}
