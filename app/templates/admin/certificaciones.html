@@ -2,66 +2,182 @@
 {% block title %}Certificaciones | Administración{% endblock %}
 {% block content %}
 <div class="page-heading">
-  <div><span class="eyebrow">CONTROL DE CALIDAD</span><h2>Certificaciones</h2><p>Revisa documentos, evalúa solicitudes y controla vencimientos.</p></div>
-  <button class="btn btn-outline-primary" id="syncExpirations"><i class="bi bi-arrow-repeat me-1"></i>Sincronizar vencimientos</button>
+  <div><span class="eyebrow">CONTROL DE CALIDAD</span><h2>Certificaciones</h2>
+    <p>Administra documentos, evalúa las solicitudes y controla la vigencia de los prestadores.</p></div>
+  <div class="d-flex gap-2 flex-wrap"><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCertificationModal"><i class="bi bi-file-earmark-plus me-1"></i>Registrar certificado</button><button class="btn btn-outline-primary" id="syncExpirations"><i class="bi bi-arrow-repeat me-1"></i>Sincronizar vencimientos</button></div>
 </div>
+
 <div class="panel-card mb-3">
   <form method="get" class="row g-2 align-items-end">
-    <div class="col-md-4"><label class="form-label">Estado</label><select class="form-select" name="estado"><option value="">Todos</option>{% for e in ['PENDIENTE','APROBADA','RECHAZADA','VENCIDA'] %}<option value="{{ e }}" {{ 'selected' if estado_filtro == e else '' }}>{{ e }}</option>{% endfor %}</select></div>
-    <div class="col-md-3"><button class="btn btn-primary">Filtrar</button> <a class="btn btn-outline-secondary" href="{{ url_for('certificaciones.index') }}">Limpiar</a></div>
+    <div class="col-md-5"><label class="form-label">Buscar prestador o documento</label>
+      <input class="form-control" name="q" value="{{ busqueda }}" placeholder="Nombre, correo o tipo de certificado"></div>
+    <div class="col-md-4"><label class="form-label">Estado</label>
+      <select class="form-select" name="estado">
+        <option value="">Todos</option>
+        {% for e in ['PENDIENTE','APROBADA','RECHAZADA','VENCIDA'] %}
+        <option value="{{ e }}" {{ 'selected' if estado_filtro == e else '' }}>{{ e }}</option>
+        {% endfor %}
+      </select></div>
+    <div class="col-md-3"><button class="btn btn-primary"><i class="bi bi-search me-1"></i>Filtrar</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('certificaciones.index') }}">Limpiar</a></div>
   </form>
 </div>
+
 <div class="panel-card">
   <div class="table-responsive">
-    <table class="table align-middle datatable">
-      <thead><tr><th>Prestador</th><th>Documento</th><th>Vigencia</th><th>Estado</th><th>Observación</th><th class="text-end">Evaluación</th></tr></thead>
-      <tbody>
+    <table class="table align-middle">
+      <thead><tr><th>Prestador</th><th>Documento</th><th>Vigencia</th><th>Estado</th><th>Observación admin.</th><th class="text-end">Acciones</th></tr></thead>
+      <tbody id="certificationsBody">
       {% for c in certificaciones %}
-        <tr>
-          <td><div class="fw-semibold">{{ c.perfil.usuario.nombre_completo }}</div><small class="text-secondary">{{ c.perfil.usuario.email }}</small></td>
-          <td>{{ c.tipo }}<div class="small text-secondary">{{ c.descripcion or '' }}</div>{% if c.documento_path %}<a class="btn btn-sm btn-outline-primary mt-1" href="{{ url_for('certificaciones.documento', certificacion_id=c.id) }}"><i class="bi bi-file-earmark-arrow-down"></i> Ver archivo</a>{% else %}<span class="small text-danger">Sin archivo</span>{% endif %}</td>
-          <td><div>Emisión: {{ c.fecha_emision.strftime('%d/%m/%Y') if c.fecha_emision else '—' }}</div><div class="small text-secondary">Vence: {{ c.fecha_vencimiento.strftime('%d/%m/%Y') if c.fecha_vencimiento else 'Sin vencimiento' }}</div></td>
-          <td><span class="badge status-{{ c.estado|lower }}">{{ c.estado }}</span></td>
-          <td class="small text-secondary">{{ c.observaciones_admin or '—' }}</td>
+        <tr id="cert-row-{{ c.id }}" data-id="{{ c.id }}" data-state="{{ c.estado }}"
+            data-expiry="{{ c.fecha_vencimiento.isoformat() if c.fecha_vencimiento else '' }}">
+          <td><div class="fw-semibold">{{ c.perfil.usuario.nombre_completo }}</div>
+            <small class="text-secondary">{{ c.perfil.usuario.email }}</small>
+            <div class="small text-secondary">{{ c.perfil.ciudad }}{% if c.perfil.distrito %} · {{ c.perfil.distrito }}{% endif %}</div></td>
+          <td><div class="fw-semibold">{{ c.tipo }}</div><div class="small text-secondary">{{ c.descripcion or '' }}</div>
+            {% if c.documento_path %}<a class="btn btn-sm btn-outline-primary mt-1" href="{{ url_for('certificaciones.documento', certificacion_id=c.id) }}" target="_blank"><i class="bi bi-file-earmark-arrow-down me-1"></i>Ver archivo</a>
+            {% else %}<span class="small text-danger">Sin archivo</span>{% endif %}</td>
+          <td><div>Emisión: {{ c.fecha_emision.strftime('%d/%m/%Y') if c.fecha_emision else '—' }}</div>
+            <div class="small text-secondary">Vence: {{ c.fecha_vencimiento.strftime('%d/%m/%Y') if c.fecha_vencimiento else 'Sin vencimiento' }}</div></td>
+          <td><span class="badge cert-state {{ 'text-bg-warning' if c.estado == 'PENDIENTE' else 'text-bg-success' if c.estado == 'APROBADA' else 'text-bg-danger' if c.estado == 'RECHAZADA' else 'text-bg-secondary' }}">{{ c.estado }}</span></td>
+          <td class="small text-secondary cert-observation">{{ c.observaciones_admin or '—' }}</td>
           <td class="text-end">
             {% if c.estado == 'PENDIENTE' %}
             <div class="btn-group btn-group-sm">
-              <button class="btn btn-success" data-evaluate data-id="{{ c.id }}" data-state="APROBADA"><i class="bi bi-check-lg"></i> Aprobar</button>
-              <button class="btn btn-outline-danger" data-evaluate data-id="{{ c.id }}" data-state="RECHAZADA"><i class="bi bi-x-lg"></i> Rechazar</button>
+              <button class="btn btn-success" data-evaluate data-id="{{ c.id }}" data-state="APROBADA"><i class="bi bi-check-lg"></i></button>
+              <button class="btn btn-outline-danger" data-evaluate data-id="{{ c.id }}" data-state="RECHAZADA"><i class="bi bi-x-lg"></i></button>
             </div>
             {% else %}<span class="small text-secondary">Evaluada</span>{% endif %}
           </td>
         </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-center text-secondary py-5">No hay certificaciones que coincidan con el filtro.</td></tr>
       {% endfor %}
       </tbody>
     </table>
+  </div>
+  <div class="small text-secondary">{{ certificaciones|length }} certificación(es)</div>
+</div>
+
+<div class="modal fade" id="newCertificationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form id="adminCertificationForm" enctype="multipart/form-data" data-url-template="{{ url_for('certificaciones.registrar_para_prestador', perfil_id=999999) }}">
+        <div class="modal-header"><h5 class="modal-title fw-bold">Registrar certificado de prestador</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="alert alert-info small">Selecciona un prestador que ya tenga perfil profesional. El documento se registrará como PENDIENTE y luego deberá aprobarse o rechazarse.</div>
+          <div class="mb-3"><label class="form-label">Prestador <span class="text-danger">*</span></label><select class="form-select" name="perfil_id" id="adminCertPerfil" required><option value="">Selecciona un prestador</option>{% for p in perfiles %}<option value="{{ p.id }}">{{ p.usuario.nombre_completo }} — {{ p.usuario.email }}</option>{% endfor %}</select></div>
+          <div class="mb-3"><label class="form-label">Tipo de certificación <span class="text-danger">*</span></label><input class="form-control" name="tipo" maxlength="120" required placeholder="Ej. Certificado técnico de gasfitería"></div>
+          <div class="mb-3"><label class="form-label">Descripción</label><textarea class="form-control" name="descripcion" rows="2"></textarea></div>
+          <div class="row g-2"><div class="col-md-6"><label class="form-label">Fecha de emisión</label><input class="form-control" type="date" name="fecha_emision"></div><div class="col-md-6"><label class="form-label">Fecha de vencimiento</label><input class="form-control" type="date" name="fecha_vencimiento"></div></div>
+          <div class="mt-3"><label class="form-label">Archivo (PDF/JPG/PNG) <span class="text-danger">*</span></label><input class="form-control" type="file" name="documento" accept=".pdf,.png,.jpg,.jpeg" required></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="saveAdminCertification">Registrar para evaluación</button></div>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
-document.querySelectorAll('[data-evaluate]').forEach(button => {
-  button.addEventListener('click', async () => {
+document.addEventListener('DOMContentLoaded', () => {
+  const body = document.getElementById('certificationsBody');
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+
+  const adminCertForm = document.getElementById('adminCertificationForm');
+  if (adminCertForm) {
+    adminCertForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!adminCertForm.reportValidity()) return;
+      const button = document.getElementById('saveAdminCertification');
+      const perfilId = document.getElementById('adminCertPerfil').value;
+      const url = adminCertForm.dataset.urlTemplate.replace('999999', encodeURIComponent(perfilId));
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
+      try {
+        const response = await fetch(url, {method:'POST', credentials:'same-origin', headers:{'Accept':'application/json','X-CSRFToken':csrf || ''}, body:new FormData(adminCertForm)});
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok || !data.certificacion?.id) throw new Error(data.message || 'No se pudo registrar el certificado.');
+        const c = data.certificacion;
+        const empty = body.querySelector('tr:not([data-id])');
+        if (empty) empty.remove();
+        const row = document.createElement('tr');
+        row.id = `cert-row-${c.id}`; row.dataset.id = c.id; row.dataset.state = c.estado; row.dataset.expiry = c.fecha_vencimiento || '';
+        const fmt = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('es-PE') : '—';
+        row.innerHTML = `<td><div class="fw-semibold">${escapeHtml(c.prestador)}</div><small class="text-secondary">${escapeHtml(c.email)}</small></td><td><div class="fw-semibold">${escapeHtml(c.tipo)}</div><div class="small text-secondary">${escapeHtml(c.descripcion)}</div><a class="btn btn-sm btn-outline-primary mt-1" href="${c.documento_url}" target="_blank">Ver archivo</a></td><td><div>Emisión: ${fmt(c.fecha_emision)}</div><div class="small text-secondary">Vence: ${c.fecha_vencimiento ? fmt(c.fecha_vencimiento) : 'Sin vencimiento'}</div></td><td><span class="badge cert-state text-bg-warning">PENDIENTE</span></td><td class="small text-secondary cert-observation">—</td><td class="text-end"><div class="btn-group btn-group-sm"><button class="btn btn-success" data-evaluate data-id="${c.id}" data-state="APROBADA"><i class="bi bi-check-lg"></i></button><button class="btn btn-outline-danger" data-evaluate data-id="${c.id}" data-state="RECHAZADA"><i class="bi bi-x-lg"></i></button></div></td>`;
+        body.prepend(row);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('newCertificationModal')).hide();
+        adminCertForm.reset();
+        await showAlert('success', data.message);
+      } catch (error) { await showAlert('error', error.message); }
+      finally { button.disabled = false; button.textContent = 'Registrar para evaluación'; }
+    });
+  }
+
+  function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  async function post(url, payload) {
+    const response = await fetch(url, {
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRFToken':csrf || ''},
+      body:JSON.stringify(payload || {})
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.message || 'No se pudo completar la operación.');
+    return data;
+  }
+
+  body.addEventListener('click', async e => {
+    const button = e.target.closest('[data-evaluate]');
+    if (!button) return;
     const state = button.dataset.state;
     const result = await Swal.fire({
-      title: state === 'APROBADA' ? '¿Aprobar certificación?' : '¿Rechazar certificación?',
-      input: 'textarea', inputLabel: 'Observaciones (opcional)',
-      showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'
+      title: state === 'APROBADA' ? 'Aprobar certificación' : 'Rechazar certificación',
+      text: state === 'APROBADA' ? 'El documento será considerado para validar al prestador.' : 'Indica el motivo para que el prestador pueda corregirlo.',
+      input:'textarea', inputLabel:'Observaciones para el prestador',
+      inputPlaceholder:'Escribe una observación...', inputAttributes:{'aria-label':'Observaciones'},
+      showCancelButton:true, confirmButtonText:'Guardar evaluación', cancelButtonText:'Cancelar',
+      confirmButtonColor: state === 'APROBADA' ? '#198754' : '#dc3545'
     });
     if (!result.isConfirmed) return;
-    const {response, data} = await apiFetch(`/admin/certificaciones/${button.dataset.id}/evaluar`, {
-      method: 'POST', body: JSON.stringify({estado: state, observaciones: result.value || ''})
-    });
-    if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo evaluar.');
-    await showAlert('success', data.message);
-    location.reload();
+    button.disabled = true;
+    try {
+      const data = await post(`/admin/certificaciones/${button.dataset.id}/evaluar`, {
+        estado:state, observaciones:result.value || ''
+      });
+      const row = document.getElementById(`cert-row-${button.dataset.id}`);
+      row.dataset.state = state;
+      const badge = row.querySelector('.cert-state');
+      badge.textContent = state;
+      badge.className = `badge cert-state ${state === 'APROBADA' ? 'text-bg-success':'text-bg-danger'}`;
+      row.querySelector('.cert-observation').textContent = data.observaciones;
+      row.querySelector('td:last-child').innerHTML = '<span class="small text-secondary">Evaluada</span>';
+      await showAlert('success', data.message);
+    } catch (err) {
+      await showAlert('error', err.message);
+      button.disabled = false;
+    }
   });
-});
-document.getElementById('syncExpirations').addEventListener('click', async () => {
-  const {response, data} = await apiFetch('{{ url_for("certificaciones.sincronizar_vencimientos") }}', {method: 'POST'});
-  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo sincronizar.');
-  await showAlert('success', data.message);
-  location.reload();
+
+  document.getElementById('syncExpirations').addEventListener('click', async e => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const data = await post('{{ url_for("certificaciones.sincronizar_vencimientos") }}');
+      const today = new Date().toISOString().slice(0,10);
+      body.querySelectorAll('tr[data-id]').forEach(row => {
+        if (row.dataset.state === 'APROBADA' && row.dataset.expiry && row.dataset.expiry < today) {
+          row.dataset.state = 'VENCIDA';
+          const badge = row.querySelector('.cert-state');
+          badge.textContent = 'VENCIDA';
+          badge.className = 'badge cert-state text-bg-secondary';
+          row.querySelector('td:last-child').innerHTML = '<span class="small text-secondary">Vencida</span>';
+        }
+      });
+      await showAlert('success', data.message);
+    } catch(err) { await showAlert('error', err.message); }
+    finally { btn.disabled = false; }
+  });
 });
 </script>
 {% endblock %}

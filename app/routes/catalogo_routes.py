@@ -16,22 +16,18 @@ def _audit_args():
 
 @catalogo_bp.get("/catalogo")
 def catalogo_publico():
-    categorias = CatalogoService.listar_categorias(solo_activas=True)
-    servicios = CatalogoService.listar_servicios(solo_activos=True)
     return render_template(
         "catalogo.html",
-        categorias=categorias,
-        servicios=servicios,
+        categorias=CatalogoService.listar_categorias(solo_activas=True),
+        servicios=CatalogoService.listar_servicios(solo_activos=True),
     )
 
 
 @catalogo_bp.get("/admin/categorias")
 @roles_required("ADMIN")
 def categorias():
-    return render_template(
-        "admin/categorias.html",
-        categorias=CatalogoService.listar_categorias(),
-    )
+    return render_template("admin/categorias.html",
+                           categorias=CatalogoService.listar_categorias())
 
 
 @catalogo_bp.post("/admin/categorias")
@@ -41,13 +37,11 @@ def guardar_categoria():
         categoria = CatalogoService.guardar_categoria(
             request.get_json(silent=True) or {}, **_audit_args()
         )
-        return jsonify({
-            "ok": True,
-            "message": "Categoría guardada.",
-            "id": categoria.id,
-        })
+        return jsonify({"ok": True, "message": "Categoría guardada.",
+                        "id": categoria.id}), 201
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
+
 
 @catalogo_bp.put("/admin/categorias/<int:categoria_id>")
 @roles_required("ADMIN")
@@ -55,14 +49,10 @@ def actualizar_categoria(categoria_id):
     try:
         categoria = CatalogoService.guardar_categoria(
             request.get_json(silent=True) or {},
-            categoria_id=categoria_id,
-            **_audit_args(),
+            categoria_id=categoria_id, **_audit_args()
         )
-        return jsonify({
-            "ok": True,
-            "message": "Categoría actualizada.",
-            "id": categoria.id,
-        })
+        return jsonify({"ok": True, "message": "Categoría actualizada.",
+                        "id": categoria.id})
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
 
@@ -70,18 +60,17 @@ def actualizar_categoria(categoria_id):
 @catalogo_bp.patch("/admin/categorias/<int:categoria_id>/estado")
 @roles_required("ADMIN")
 def cambiar_estado_categoria(categoria_id):
-    datos = request.get_json(silent=True) or {}
     try:
         categoria = CatalogoService.cambiar_estado_categoria(
-            categoria_id, datos.get("activo"), **_audit_args()
+            categoria_id,
+            (request.get_json(silent=True) or {}).get("activo"),
+            **_audit_args()
         )
-        return jsonify({
-            "ok": True,
-            "message": "Estado de la categoría actualizado.",
-            "activo": categoria.activo,
-        })
+        return jsonify({"ok": True, "message": "Estado actualizado.",
+                        "activo": categoria.activo})
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
+
 
 
 @catalogo_bp.delete("/admin/categorias/<int:categoria_id>")
@@ -118,8 +107,8 @@ def guardar_servicio():
             "ok": True,
             "message": "Servicio guardado.",
             "id": servicio.id,
-        })
-    except (ValueError, TypeError) as exc:
+        }), 201
+    except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
 
 
@@ -130,14 +119,14 @@ def actualizar_servicio(servicio_id):
         servicio = CatalogoService.guardar_servicio(
             request.get_json(silent=True) or {},
             servicio_id=servicio_id,
-            **_audit_args(),
+            **_audit_args()
         )
         return jsonify({
             "ok": True,
             "message": "Servicio actualizado.",
             "id": servicio.id,
         })
-    except (ValueError, TypeError) as exc:
+    except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
 
 

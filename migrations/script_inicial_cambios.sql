@@ -2,6 +2,7 @@
 -- =====================================================
 -- 1. EXTENSIONES
 -- =====================================================
+SELECT version(); --PostgreSQL 18.3 on x86_64-windows, compiled by msvc-19.44.35223, 64-bit
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -634,7 +635,6 @@ CREATE INDEX IF NOT EXISTS ix_matches_demanda_score ON matches(demanda_id, score
 CREATE UNIQUE INDEX IF NOT EXISTS uq_matches_demanda_perfil
     ON matches(demanda_id, perfil_id);
 
-COMMIT;
 
 -- Ejecutar una sola vez sobre la base de datos existente de AppMarketplace.
 -- Las cuentas locales conservan su hash; las cuentas exclusivamente sociales
@@ -660,7 +660,7 @@ CREATE INDEX IF NOT EXISTS ix_identidades_oauth_usuario_id
 
 -- Migración incremental: soporte de dirección y geolocalización en demandas.
 -- Ejecutar una sola vez sobre la base PostgreSQL del proyecto.
-BEGIN;
+
 
 ALTER TABLE demandas
     ADD COLUMN IF NOT EXISTS direccion VARCHAR(250),
@@ -683,7 +683,6 @@ BEGIN
     END IF;
 END $$;
 
-COMMIT;
 
 -- icono a categoria
 
@@ -714,6 +713,42 @@ END $$;
 CREATE INDEX IF NOT EXISTS ix_demandas_servicio_id
     ON demandas(servicio_id);
 
+
+--
+-- El modelo Servicio ya contempla precio_referencial; el script inicial no lo crea.
+ALTER TABLE servicios
+    ADD COLUMN IF NOT EXISTS precio_referencial NUMERIC(10,2);
+
+-- Asegurar columnas de descripción/icono en categorías para que el modelo coincida.
+ALTER TABLE categorias
+    ADD COLUMN IF NOT EXISTS descripcion TEXT;
+ALTER TABLE categorias
+    ADD COLUMN IF NOT EXISTS icono VARCHAR(100);
+
+-- Datos de respaldo documental y evaluación de certificaciones.
+ALTER TABLE certificaciones
+    ADD COLUMN IF NOT EXISTS descripcion TEXT;
+ALTER TABLE certificaciones
+    ADD COLUMN IF NOT EXISTS documento_path VARCHAR(500);
+ALTER TABLE certificaciones
+    ADD COLUMN IF NOT EXISTS documento_nombre VARCHAR(255);
+ALTER TABLE certificaciones
+    ADD COLUMN IF NOT EXISTS documento_mime VARCHAR(120);
+ALTER TABLE certificaciones
+    ADD COLUMN IF NOT EXISTS observaciones_admin TEXT;
+ALTER TABLE certificaciones
+    ADD COLUMN IF NOT EXISTS evaluado_at TIMESTAMP;
+
+-- La solicitud inicial la registra el prestador; el evaluador solo existe al evaluar.
+ALTER TABLE certificaciones
+    ALTER COLUMN evaluador_id DROP NOT NULL;
+
+CREATE INDEX IF NOT EXISTS ix_servicios_categoria_activo
+    ON servicios (categoria_id, activo);
+CREATE INDEX IF NOT EXISTS ix_certificaciones_estado_created
+    ON certificaciones (estado, created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_certificaciones_perfil
+    ON certificaciones (perfil_id);
 
 
 select * from usuarios;

@@ -1,75 +1,235 @@
 {% extends "base.html" %}
 {% block title %}Servicios | Administración{% endblock %}
 {% block content %}
-<div class="page-heading"><div><span class="eyebrow">CATÁLOGO</span><h2>Servicios</h2><p>Define y administra los servicios que los clientes podrán solicitar.</p></div><button class="btn btn-primary" id="newService"><i class="bi bi-plus-lg me-1"></i>Nuevo servicio</button></div>
+<div class="page-heading">
+  <div><span class="eyebrow">CATÁLOGO</span><h2>Servicios</h2>
+    <p>Administra los servicios asociados a cada categoría del marketplace.</p></div>
+  <button class="btn btn-primary" id="newService"><i class="bi bi-plus-lg me-1"></i>Nuevo servicio</button>
+</div>
+
+<div class="panel-card mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-5">
+      <label class="form-label">Buscar servicio</label>
+      <input class="form-control" id="serviceSearch" placeholder="Nombre del servicio...">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Filtrar por categoría</label>
+      <select class="form-select" id="categoryFilter">
+        <option value="">Todas las categorías</option>
+        {% for c in categorias %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Estado</label>
+      <select class="form-select" id="statusFilter">
+        <option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option>
+      </select>
+    </div>
+  </div>
+</div>
+
 <div class="panel-card">
   <div class="table-responsive">
-    <table class="table align-middle datatable">
+    <table class="table align-middle" id="servicesTable">
       <thead><tr><th>Servicio</th><th>Categoría</th><th>Precio referencial</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
-      <tbody>
+      <tbody id="servicesBody">
       {% for s in servicios %}
-        <tr>
-          <td><div class="fw-semibold">{{ s.nombre }}</div><small class="text-secondary">{{ s.descripcion or '' }}</small></td>
-          <td>{{ s.categoria.nombre }}</td>
-          <td>{{ 'S/ %.2f'|format(s.precio_referencial) if s.precio_referencial is not none else 'A cotizar' }}</td>
-          <td><span class="badge {{ 'text-bg-success' if s.activo else 'text-bg-secondary' }}">{{ 'Activo' if s.activo else 'Inactivo' }}</span></td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary" data-edit-service data-id="{{ s.id }}" data-name="{{ s.nombre }}" data-description="{{ s.descripcion or '' }}" data-category="{{ s.categoria_id }}" data-price="{{ s.precio_referencial or '' }}"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm {{ 'btn-outline-danger' if s.activo else 'btn-outline-success' }}" data-toggle-service data-id="{{ s.id }}" data-active="{{ 'true' if s.activo else 'false' }}">{{ 'Desactivar' if s.activo else 'Activar' }}</button>
-          </td>
-        </tr>
+      <tr id="service-row-{{ s.id }}" data-id="{{ s.id }}" data-category="{{ s.categoria_id }}" data-active="{{ 'true' if s.activo else 'false' }}">
+        <td><div class="fw-semibold service-name">{{ s.nombre }}</div><small class="text-secondary service-description">{{ s.descripcion or '' }}</small></td>
+        <td class="service-category">{{ s.categoria.nombre }}</td>
+        <td class="service-price">{{ 'S/ %.2f'|format(s.precio_referencial) if s.precio_referencial is not none else 'A cotizar' }}</td>
+        <td><span class="badge {{ 'text-bg-success' if s.activo else 'text-bg-secondary' }} service-status">{{ 'Activo' if s.activo else 'Inactivo' }}</span></td>
+        <td class="text-end text-nowrap">
+          <button class="btn btn-sm btn-outline-primary" data-edit-service="{{ s.id }}" title="Editar"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-sm {{ 'btn-outline-danger' if s.activo else 'btn-outline-success' }}" data-toggle-service="{{ s.id }}" title="{{ 'Desactivar' if s.activo else 'Activar' }}">
+            <i class="bi {{ 'bi-eye-slash' if s.activo else 'bi-eye' }}"></i>
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr id="emptyServices"><td colspan="5" class="text-center text-secondary py-5">Todavía no hay servicios registrados.</td></tr>
       {% endfor %}
       </tbody>
     </table>
+    <div class="small text-secondary" id="serviceCounter"></div>
+  </div>
+</div>
+
+<div class="modal fade" id="serviceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form id="serviceForm" novalidate data-create-url="{{ url_for('servicios.crear') }}" data-update-url-template="{{ url_for('servicios.actualizar', servicio_id=999999) }}" data-state-url-template="{{ url_for('servicios.cambiar_estado', servicio_id=999999) }}">
+        <div class="modal-header"><h5 class="modal-title fw-bold" id="serviceModalTitle">Nuevo servicio</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <input type="hidden" id="serviceId">
+          <div class="mb-3"><label class="form-label fw-semibold" for="serviceCategory">Categoría <span class="text-danger">*</span></label>
+            <select class="form-select" id="serviceCategory" required>
+              <option value="">Selecciona una categoría</option>
+              {% for c in categorias %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+            </select><div class="invalid-feedback">Selecciona una categoría activa.</div>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold" for="serviceName">Nombre del servicio <span class="text-danger">*</span></label>
+            <input class="form-control" id="serviceName" maxlength="150" required placeholder="Ej. Reparación de fugas">
+            <div class="invalid-feedback">Ingresa el nombre del servicio.</div>
+          </div>
+          <div class="mb-3"><label class="form-label" for="serviceDescription">Descripción</label>
+            <textarea class="form-control" id="serviceDescription" rows="3" placeholder="Describe brevemente el servicio"></textarea></div>
+          <div class="mb-3"><label class="form-label" for="servicePrice">Precio referencial (S/)</label>
+            <input class="form-control" id="servicePrice" type="number" min="0" step="0.01" placeholder="Opcional"></div>
+          <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="serviceActive" checked>
+            <label class="form-check-label" for="serviceActive">Servicio disponible para solicitudes</label></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="saveService"><i class="bi bi-check-lg me-1"></i>Guardar servicio</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
-const categoryOptions = {{ categorias|map(attribute='id')|list|tojson }};
-const categoryNames = {{ categorias|map(attribute='nombre')|list|tojson }};
-const categorySelect = {{ categorias|map(attribute='id')|list|tojson }};
-const categoryLabels = {{ categorias|map(attribute='nombre')|list|tojson }};
-function buildCategoryOptions(selected) {
-  return categorySelect.map((id, i) => `<option value="${id}" ${String(id) === String(selected) ? 'selected' : ''}>${Swal.escapeHtml(categoryLabels[i])}</option>`).join('');
-}
-async function serviceDialog(initial = {}) {
-  if (!categorySelect.length) return showAlert('warning', 'Primero registra una categoría activa.');
-  const result = await Swal.fire({
-    title: initial.id ? 'Editar servicio' : 'Nuevo servicio',
-    html: `<input id="srvName" class="swal2-input" maxlength="150" placeholder="Nombre" value="${Swal.escapeHtml(initial.name || '')}">
-      <select id="srvCategory" class="swal2-select">${buildCategoryOptions(initial.category)}</select>
-      <textarea id="srvDesc" class="swal2-textarea" placeholder="Descripción">${Swal.escapeHtml(initial.description || '')}</textarea>
-      <input id="srvPrice" type="number" min="0" step="0.01" class="swal2-input" placeholder="Precio referencial (opcional)" value="${Swal.escapeHtml(initial.price || '')}">`,
-    showCancelButton: true, focusConfirm: false, confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar',
-    preConfirm: () => {
-      const nombre = document.getElementById('srvName').value.trim();
-      if (!nombre) { Swal.showValidationMessage('El nombre es obligatorio.'); return false; }
-      return {
-        nombre,
-        categoria_id: document.getElementById('srvCategory').value,
-        descripcion: document.getElementById('srvDesc').value,
-        precio_referencial: document.getElementById('srvPrice').value
-      };
+document.addEventListener('DOMContentLoaded', () => {
+  const modalEl = document.getElementById('serviceModal');
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const form = document.getElementById('serviceForm');
+  const body = document.getElementById('servicesBody');
+  const categories = {{ categorias|map(attribute='id')|list|tojson }};
+  const createUrl = form.dataset.createUrl;
+  const updateUrl = id => form.dataset.updateUrlTemplate.replace('999999', encodeURIComponent(id));
+  const stateUrl = id => form.dataset.stateUrlTemplate.replace('999999', encodeURIComponent(id));
+  let busy = false;
+
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+
+  function payloadFromForm() {
+    return {
+      categoria_id: Number($('serviceCategory').value),
+      nombre: $('serviceName').value.trim(),
+      descripcion: $('serviceDescription').value.trim(),
+      precio_referencial: $('servicePrice').value || null,
+      activo: $('serviceActive').checked
+    };
+  }
+
+  function openModal(item = null) {
+    form.reset(); form.classList.remove('was-validated');
+    $('serviceId').value = item?.id || '';
+    $('serviceModalTitle').textContent = item ? 'Editar servicio' : 'Nuevo servicio';
+    $('serviceCategory').value = item?.categoria_id || '';
+    $('serviceName').value = item?.nombre || '';
+    $('serviceDescription').value = item?.descripcion || '';
+    $('servicePrice').value = item?.precio_referencial || '';
+    $('serviceActive').checked = item ? !!item.activo : true;
+    modal.show();
+  }
+
+  async function request(url, method, data) {
+    const response = await fetch(url, {
+      method, credentials:'same-origin',
+      headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRFToken':csrf || ''},
+      body: data ? JSON.stringify(data) : undefined
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw new Error(result.message || 'No se pudo completar la operación.');
+    return result;
+  }
+
+  function rowHtml(s) {
+    if (!s || s.id === undefined || s.id === null) {
+      throw new Error('El servidor guardó el servicio, pero no devolvió su identificador. Verifica la respuesta JSON de /admin/servicios/.');
+    }
+    return `<tr id="service-row-${s.id}" data-id="${s.id}" data-category="${s.categoria_id}" data-active="${s.activo}">
+      <td><div class="fw-semibold service-name">${esc(s.nombre)}</div><small class="text-secondary service-description">${esc(s.descripcion)}</small></td>
+      <td class="service-category">${esc(s.categoria)}</td>
+      <td class="service-price">${s.precio_referencial ? 'S/ ' + Number(s.precio_referencial).toFixed(2) : 'A cotizar'}</td>
+      <td><span class="badge ${s.activo ? 'text-bg-success':'text-bg-secondary'} service-status">${s.activo?'Activo':'Inactivo'}</span></td>
+      <td class="text-end text-nowrap">
+        <button class="btn btn-sm btn-outline-primary" data-edit-service="${s.id}"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm ${s.activo?'btn-outline-danger':'btn-outline-success'}" data-toggle-service="${s.id}">
+          <i class="bi ${s.activo?'bi-eye-slash':'bi-eye'}"></i></button>
+      </td></tr>`;
+  }
+
+  function updateRow(s) {
+    const old = document.getElementById(`service-row-${s.id}`);
+    if (old) old.outerHTML = rowHtml(s);
+    else { document.getElementById('emptyServices')?.remove(); body.insertAdjacentHTML('afterbegin', rowHtml(s)); }
+    applyFilters();
+  }
+
+  $('newService').addEventListener('click', () => {
+    if (!categories.length) return showAlert('warning','Primero registra y activa una categoría.');
+    openModal();
+  });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (busy) return;
+    if (!form.checkValidity()) { form.classList.add('was-validated'); return; }
+    const id = $('serviceId').value;
+    const button = $('saveService');
+    busy = true; button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+    try {
+      const result = await request(id ? updateUrl(id) : createUrl, id ? 'PUT':'POST', payloadFromForm());
+      const savedService = result.servicio || result.data?.servicio || result.data;
+      if (!savedService || savedService.id === undefined || savedService.id === null) {
+        throw new Error('El servidor confirmó la operación, pero la respuesta no contiene servicio.id. Revisa que estés ejecutando la versión actual de servicios_routes.py.');
+      }
+      updateRow(savedService); modal.hide();
+      await showAlert('success', result.message);
+    } catch (err) { showAlert('error', err.message); }
+    finally { busy = false; button.disabled = false; button.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar servicio'; }
+  });
+
+  body.addEventListener('click', async e => {
+    const edit = e.target.closest('[data-edit-service]');
+    const toggle = e.target.closest('[data-toggle-service]');
+    if (edit) {
+      const row = edit.closest('tr');
+      openModal({
+        id: row.dataset.id, categoria_id: row.dataset.category,
+        nombre: row.querySelector('.service-name').textContent,
+        descripcion: row.querySelector('.service-description').textContent,
+        precio_referencial: row.querySelector('.service-price').textContent.replace('S/','').trim() === 'A cotizar' ? '' : row.querySelector('.service-price').textContent.replace('S/','').trim(),
+        activo: row.dataset.active === 'true'
+      });
+    }
+    if (toggle) {
+      const row = toggle.closest('tr'), active = row.dataset.active === 'true';
+      const confirm = await Swal.fire({title: active?'¿Desactivar servicio?':'¿Activar servicio?', text:'El cambio se aplicará sin recargar la página.', icon:'warning', showCancelButton:true, confirmButtonText:'Confirmar', cancelButtonText:'Cancelar'});
+      if (!confirm.isConfirmed) return;
+      toggle.disabled = true;
+      try {
+        const result = await request(stateUrl(row.dataset.id), 'PATCH', {activo:!active});
+        const savedService = result.servicio || result.data?.servicio || result.data;
+        if (!savedService || savedService.id === undefined || savedService.id === null) throw new Error('La respuesta no contiene el servicio actualizado.');
+        updateRow(savedService); await showAlert('success', result.message);
+      } catch(err) { showAlert('error', err.message); }
+      finally { toggle.disabled = false; }
     }
   });
-  if (!result.isConfirmed) return;
-  const url = initial.id ? `/admin/servicios/${initial.id}` : '/admin/servicios';
-  const {response, data} = await apiFetch(url, {method: initial.id ? 'PUT' : 'POST', body: JSON.stringify(result.value)});
-  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo guardar.');
-  await showAlert('success', data.message); location.reload();
-}
-document.getElementById('newService').addEventListener('click', () => serviceDialog());
-document.querySelectorAll('[data-edit-service]').forEach(btn => btn.addEventListener('click', () => serviceDialog({
-  id: btn.dataset.id, name: btn.dataset.name, description: btn.dataset.description, category: btn.dataset.category, price: btn.dataset.price
-})));
-document.querySelectorAll('[data-toggle-service]').forEach(btn => btn.addEventListener('click', async () => {
-  const active = btn.dataset.active === 'true';
-  const confirm = await Swal.fire({title: active ? '¿Desactivar servicio?' : '¿Activar servicio?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'});
-  if (!confirm.isConfirmed) return;
-  const {response, data} = await apiFetch(`/admin/servicios/${btn.dataset.id}/estado`, {method: 'PATCH', body: JSON.stringify({activo: !active})});
-  if (!response.ok || !data.ok) return showAlert('error', data.message || 'No se pudo actualizar.');
-  await showAlert('success', data.message); location.reload();
-}));
+
+  function applyFilters() {
+    const term = $('serviceSearch').value.toLowerCase().trim();
+    const category = $('categoryFilter').value, status = $('statusFilter').value;
+    let visible = 0;
+    body.querySelectorAll('tr[data-id]').forEach(row => {
+      const match = row.textContent.toLowerCase().includes(term)
+        && (!category || row.dataset.category === category)
+        && (!status || row.dataset.active === status);
+      row.classList.toggle('d-none', !match); if (match) visible++;
+    });
+    $('serviceCounter').textContent = `${visible} servicio(s) mostrado(s)`;
+  }
+  ['serviceSearch','categoryFilter','statusFilter'].forEach(id => $(id).addEventListener(id==='serviceSearch'?'input':'change', applyFilters));
+  applyFilters();
+});
 </script>
 {% endblock %}

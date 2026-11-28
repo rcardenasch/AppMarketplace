@@ -104,7 +104,6 @@ class CatalogoService:
         return CatalogoService.cambiar_estado_categoria(
             categoria_id, False, actor_id, ip, user_agent
         )
-
     @staticmethod
     def listar_servicios(solo_activos=False):
         query = Servicio.query.join(Categoria)
@@ -146,6 +145,14 @@ class CatalogoService:
                 raise ValueError("El precio referencial no es válido.")
             if precio < 0:
                 raise ValueError("El precio no puede ser negativo.")
+
+        duplicado = Servicio.query.filter(
+            Servicio.categoria_id == categoria.id,
+            Servicio.nombre.ilike(nombre),
+            Servicio.id != (servicio.id or 0),
+        ).first()
+        if duplicado:
+            raise ValueError("Ya existe un servicio con ese nombre en la categoría seleccionada.")
 
         anterior = {
             "nombre": servicio.nombre,
@@ -204,3 +211,4 @@ class CatalogoService:
         return CatalogoService.cambiar_estado_servicio(
             servicio_id, False, actor_id, ip, user_agent
         )
+

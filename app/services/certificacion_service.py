@@ -3,6 +3,7 @@ from datetime import date, datetime
 from pathlib import Path
 from flask import current_app
 from werkzeug.utils import secure_filename
+from sqlalchemy import or_
 from app.extensions.database import db
 from app.models import Certificacion
 from app.models.perfil_profesional import PerfilProfesional
@@ -16,7 +17,7 @@ class CertificacionService:
     @staticmethod
     def listar_certificaciones(estado=None):
         query = Certificacion.query
-        if estado:
+        if estado in {"PENDIENTE", "APROBADA", "RECHAZADA", "VENCIDA"}:
             query = query.filter(Certificacion.estado == estado)
         return query.order_by(Certificacion.created_at.desc()).all()
 
@@ -24,7 +25,13 @@ class CertificacionService:
     def listar_por_perfil(perfil_id: int, solo_activas: bool = False):
         query = Certificacion.query.filter_by(perfil_id=perfil_id)
         if solo_activas:
-            query = query.filter(Certificacion.estado == "APROBADA")
+            query = query.filter(
+                Certificacion.estado == "APROBADA",
+                or_(
+                    Certificacion.fecha_vencimiento.is_(None),
+                    Certificacion.fecha_vencimiento >= date.today(),
+                ),
+            )
         return query.order_by(Certificacion.created_at.desc()).all()
 
     @staticmethod
@@ -47,9 +54,9 @@ class CertificacionService:
         if fecha_emision and fecha_vencimiento and fecha_vencimiento < fecha_emision:
             raise ValueError("La fecha de vencimiento no puede ser anterior a la fecha de emisión.")
 
-        doc_path = doc_nombre = doc_mime = None
-        if archivo and archivo.filename:
-            doc_path, doc_nombre, doc_mime = CertificacionService._guardar_archivo(perfil_id, archivo)
+        if not archivo or not archivo.filename:
+            raise ValueError("Adjunta el certificado o documento que deseas acreditar.")
+        doc_path, doc_nombre, doc_mime = CertificacionService._guardar_archivo(perfil_id, archivo)
 
         cert = Certificacion(
             perfil_id=perfil_id,
@@ -63,7 +70,7 @@ class CertificacionService:
             estado="PENDIENTE",
         )
         db.session.add(cert)
-        db.session.commit()
+        db.session.flush()
 
         AuditoriaService.registrar(
             actor_id=actor_id,
@@ -73,6 +80,7 @@ class CertificacionService:
             ip=ip,
             user_agent=user_agent,
         )
+        db.session.commit()
         return cert
 
     @staticmethod
@@ -81,13 +89,18 @@ class CertificacionService:
             raise ValueError("Estado de evaluación inválido.")
 
         cert = CertificacionService.obtener(certificacion_id)
+        if (
+            estado == "APROBADA"
+            and cert.fecha_vencimiento
+            and cert.fecha_vencimiento < date.today()
+        ):
+            raise ValueError("No se puede aprobar una certificación que ya está vencida.")
         cert.estado = estado
         cert.observaciones_admin = (observaciones or "").strip() or None
         cert.evaluador_id = evaluador_id
         cert.evaluado_at = datetime.utcnow()
 
         CertificacionService._actualizar_badge_perfil(cert.perfil_id)
-        db.session.commit()
 
         AuditoriaService.registrar(
             actor_id=evaluador_id,
@@ -97,6 +110,7 @@ class CertificacionService:
             ip=ip,
             user_agent=user_agent,
         )
+        db.session.commit()
         return cert
 
     @staticmethod
@@ -125,9 +139,17 @@ class CertificacionService:
     @staticmethod
     def _actualizar_badge_perfil(perfil_id: int):
         """Marca perfil.certificado = True si tiene al menos una certificación APROBADA vigente."""
+        hoy = date.today()
         tiene_aprobada = (
             Certificacion.query
-            .filter_by(perfil_id=perfil_id, estado="APROBADA")
+            .filter(
+                Certificacion.perfil_id == perfil_id,
+                Certificacion.estado == "APROBADA",
+                or_(
+                    Certificacion.fecha_vencimiento.is_(None),
+                    Certificacion.fecha_vencimiento >= hoy,
+                ),
+            )
             .first()
             is not None
         )
